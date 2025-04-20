@@ -1,27 +1,19 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RutrackerService } from '../rutracker.service';
 import { Cookie } from '../interfaces/rutracker.interface';
-import { ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 
 describe('RutrackerService', () => {
   let service: RutrackerService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        RutrackerService,
-        {
-          provide: ConfigService,
-          useValue: {
-            get: jest.fn((key, defaultValue) => {
-              if (key === 'RUTRACKER_BASE_URL') {
-                return 'https://rutracker.org/forum/';
-              }
-              return defaultValue;
-            }),
-          },
-        },
+      imports: [
+        ConfigModule.forRoot({
+          isGlobal: true,
+        }),
       ],
+      providers: [RutrackerService],
     }).compile();
 
     service = module.get<RutrackerService>(RutrackerService);
