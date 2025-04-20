@@ -53,6 +53,8 @@ The RuTracker module provides functionality to interact with the RuTracker websi
 - Handles cookies for maintaining session state
 - Provides universal visit method for different pages
 - Automatically detects and converts Win-1251 encoding
+- Implements login functionality with cookie persistence
+- Stores session cookies in a file for persistent authentication
 
 #### Example Usage
 
@@ -63,15 +65,39 @@ constructor(private readonly rutrackerService: RutrackerService) {}
 // Visit the main page
 const mainPageResult = await this.rutrackerService.visitMainPage();
 
+// Check if already logged in
+const isLoggedIn = this.rutrackerService.getLoginStatus();
+
+// Login to RuTracker (if not already logged in)
+if (!isLoggedIn) {
+  const loginSuccess = await this.rutrackerService.login();
+  console.log(`Login successful: ${loginSuccess}`);
+}
+
 // Visit any specific page
 const forumResult = await this.rutrackerService.visit('viewforum.php?f=1538');
 
 // Post data to a form
-const loginResult = await this.rutrackerService.visit('login.php', 'POST', {
-  username: 'user',
-  password: 'pass'
+const searchResult = await this.rutrackerService.visit('tracker.php', 'POST', {
+  nm: 'search query'
 });
 
 // Get the page content and cookies
-const { body, cookies } = result;
+const { body, cookies } = forumResult;
+```
+
+#### Configuration
+
+Create a `.env` file based on the `.env.example`:
+
+```bash
+# RuTracker credentials
+RUTRACKER_USERNAME=your_username
+RUTRACKER_PASSWORD=your_password
+
+# Cookie file path (relative to project root)
+RUTRACKER_COOKIE_FILE=rutracker.cookie
+
+# RuTracker base URL
+RUTRACKER_BASE_URL=https://rutracker.org/forum/
 ```
