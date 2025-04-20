@@ -1,0 +1,28 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Documentation Management Rules
+
+## File Purposes
+- **README.md**: Public-facing documentation for users and new contributors
+- **INSTRUCTIONS.md**: Internal development documentation, architecture details, and coding standards
+
+## Agent Behavior
+- The agent must read and keep both README.md and INSTRUCTIONS.md content up-to-date in its context
+- Changes to either file must influence the agent's behavior and decision-making
+- When updating documentation:
+  - Avoid duplicating information between files
+  - Place information in the appropriate file according to its purpose
+  - Ensure consistency between both files where overlap is necessary
+
+## Information Placement
+- Public information (overview, installation) belongs in README.md
+- Development details (architecture, coding standards) belong in INSTRUCTIONS.md
+- When information changes in one file, check if the other needs corresponding updates
+
+# Always Read and Update from INSTRUCTIONS.md
+
+- The agent must continuously monitor, read, and keep the contents of the INSTRUCTIONS.md file fully up-to-date in its context.
+- Changes in INSTRUCTIONS.md must immediately influence the agent’s behavior and decision-making processes.

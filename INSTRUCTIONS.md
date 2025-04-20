@@ -1,20 +1,22 @@
-# RuTracker MCP - Project Instructions
+# RuTracker MCP - Development Documentation
 
-## Project Overview
-This is a Nest.js based backend for the RuTracker MCP (Model Context Protocol) application. The application will serve as an implementation of the Model Context Protocol - an open protocol that standardizes how applications provide context to LLMs (Large Language Models).
+## Architecture Overview
+This application implements the Model Context Protocol (MCP) - an open protocol that standardizes how applications provide context to LLMs (Large Language Models).
 
 MCP follows a client-server architecture:
 - **MCP Hosts**: Programs like Claude Desktop, IDEs, or AI tools that want to access data through MCP
 - **MCP Clients**: Protocol clients that maintain 1:1 connections with servers
 - **MCP Servers**: Lightweight programs that expose specific capabilities through the standardized Model Context Protocol
 
-This RuTracker MCP implementation will provide integrations and tools specifically designed for the RuTracker ecosystem.
+This RuTracker MCP implementation provides integrations and tools specifically designed for the RuTracker ecosystem.
 
 ## Development History
 
 ### Initial Setup (Current)
 - Basic Nest.js application scaffold created
 - Standard modules and controllers in place
+- Boilerplate code removed
+- Documentation structure established
 
 ## Project Structure
 The project follows a feature/module-based architecture:
@@ -35,14 +37,14 @@ src/
 
 Each feature or module contains all related components (controllers, services, DTOs, entities) in its own directory, promoting better organization and easier navigation.
 
-## Getting Started
+## Development Workflow
 
-### Installation
+### Setup & Installation
 ```bash
 npm install
 ```
 
-### Development
+### Running Locally
 ```bash
 npm run start:dev
 ```
@@ -53,7 +55,7 @@ npm run test
 npm run test:e2e
 ```
 
-### Production Build
+### Building for Production
 ```bash
 npm run build
 npm run start:prod
@@ -65,6 +67,10 @@ npm run start:prod
 - Document new modules and complex logic
 - Write tests for new features
 - Follow the established project structure
-- Update this documentation as the project evolves to reflect new features and architectural changes
+- Update documentation as the project evolves
+
+## Documentation Management
+- README.md contains public-facing information for users
+- INSTRUCTIONS.md (this file) contains internal development information
 
 This document will be updated as the project evolves. 
