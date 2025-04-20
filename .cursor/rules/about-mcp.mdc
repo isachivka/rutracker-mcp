@@ -1,7 +1,7 @@
 ---
 description: 
-globs: MCP.md
-alwaysApply: false
+globs: 
+alwaysApply: true
 ---
 
-# This project implements mcp server, you need to follow the corresponding documentation of MCP TypeScript SDK, MCP.md
+# This project implements mcp server, you need to follow the corresponding documentation of MCP TypeScript SDK, MCP.md we will use MCP NestJS implemencation – NestJS MCP.md
