@@ -1,22 +1,110 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import axios, { AxiosRequestConfig, Method } from 'axios';
 import { Cookie, PageVisitResult } from './interfaces/rutracker.interface';
 import { parseCookies } from './utils/cookie.utils';
 import * as iconv from 'iconv-lite';
 import { ConfigService } from '@nestjs/config';
 import { CONFIG } from '../config';
+import * as fs from 'fs';
+import * as path from 'path';
 
 @Injectable()
-export class RutrackerService {
+export class RutrackerService implements OnModuleInit {
   private cookies: Cookie[] = [];
   private rawCookies: string[] = [];
   private readonly baseUrl: string;
+  private readonly username: string;
+  private readonly password: string;
+  private isLoggedIn: boolean = false;
+  private readonly cookieFilePath: string;
 
   constructor(private configService: ConfigService) {
     this.baseUrl = this.configService.get<string>(
       CONFIG.RUTRACKER.BASE_URL,
       'https://rutracker.org/forum/',
     );
+    this.username = this.configService.get<string>(CONFIG.RUTRACKER.USERNAME, '');
+    this.password = this.configService.get<string>(CONFIG.RUTRACKER.PASSWORD, '');
+
+    // Get cookie file path from config or use default
+    const cookieFile = this.configService.get<string>(
+      CONFIG.RUTRACKER.COOKIE_FILE,
+      'rutracker.cookie',
+    );
+
+    // Resolve the absolute path for the cookie file
+    this.cookieFilePath = path.isAbsolute(cookieFile)
+      ? cookieFile
+      : path.resolve(process.cwd(), cookieFile);
+
+    console.log(`Cookie file path: ${this.cookieFilePath}`);
+  }
+
+  /**
+   * Initialize the service by loading cookies from file
+   */
+  async onModuleInit() {
+    await this.loadCookiesFromFile();
+    this.updateLoginStatus();
+  }
+
+  /**
+   * Load cookies from the cookie file
+   */
+  private async loadCookiesFromFile(): Promise<void> {
+    try {
+      if (fs.existsSync(this.cookieFilePath)) {
+        const cookieData = await fs.promises.readFile(this.cookieFilePath, 'utf8');
+        if (cookieData) {
+          const cookies = JSON.parse(cookieData);
+          if (Array.isArray(cookies)) {
+            this.cookies = cookies;
+
+            // Generate raw cookies for headers
+            this.rawCookies = cookies.map(
+              cookie => `${cookie.name}=${cookie.value}; path=${cookie.path}`,
+            );
+
+            console.log(`Loaded ${cookies.length} cookies from file`);
+          }
+        }
+      }
+    } catch (error) {
+      console.error(`Error loading cookies from file: ${error.message}`);
+    }
+  }
+
+  /**
+   * Save cookies to the cookie file
+   */
+  private async saveCookiesToFile(): Promise<void> {
+    try {
+      const dirPath = path.dirname(this.cookieFilePath);
+
+      // Ensure directory exists
+      if (!fs.existsSync(dirPath)) {
+        await fs.promises.mkdir(dirPath, { recursive: true });
+      }
+
+      await fs.promises.writeFile(
+        this.cookieFilePath,
+        JSON.stringify(this.cookies, null, 2),
+        'utf8',
+      );
+
+      console.log(`Saved ${this.cookies.length} cookies to file`);
+    } catch (error) {
+      console.error(`Error saving cookies to file: ${error.message}`);
+    }
+  }
+
+  /**
+   * Update login status based on whether bb_session cookie exists
+   */
+  private updateLoginStatus(): void {
+    const bbSessionCookie = this.cookies.find(cookie => cookie.name === 'bb_session');
+    this.isLoggedIn = !!bbSessionCookie;
+    console.log(`Login status updated: ${this.isLoggedIn}`);
   }
 
   /**
@@ -24,9 +112,15 @@ export class RutrackerService {
    * @param page The page path (relative to baseUrl)
    * @param method HTTP method to use
    * @param data Optional data to send with request (for POST, PUT, etc.)
+   * @param allowRedirects Whether to allow automatic redirects
    * @returns Promise with visit result (cookies and page body)
    */
-  async visit(page: string, method: Method = 'GET', data?: any): Promise<PageVisitResult> {
+  async visit(
+    page: string,
+    method: Method = 'GET',
+    data?: any,
+    allowRedirects: boolean = true,
+  ): Promise<PageVisitResult> {
     const url = this.baseUrl + page;
 
     try {
@@ -43,8 +137,10 @@ export class RutrackerService {
           'Upgrade-Insecure-Requests': '1',
           'Cache-Control': 'max-age=0',
         },
-        maxRedirects: 5,
-        validateStatus: status => status < 400, // Only reject if status code is >= 400
+        maxRedirects: allowRedirects ? 5 : 0, // Only follow redirects if allowed
+        validateStatus: allowRedirects
+          ? status => status < 400 // Only reject if status code is >= 400 when redirects are allowed
+          : () => true, // Accept all status codes when disabling redirects
         responseType: 'arraybuffer', // Important for correct encoding handling
       };
 
@@ -65,8 +161,14 @@ export class RutrackerService {
       const setCookieHeaders = response.headers['set-cookie'];
       if (setCookieHeaders) {
         this.rawCookies = setCookieHeaders;
-        this.cookies = parseCookies(setCookieHeaders);
+        this.cookies = [...this.cookies, ...parseCookies(setCookieHeaders)];
         console.log('Cookies saved:', this.cookies);
+
+        // Save cookies to file after each update
+        await this.saveCookiesToFile();
+
+        // Update login status
+        this.updateLoginStatus();
       }
 
       // Convert body from Windows-1251 to UTF-8
@@ -86,6 +188,7 @@ export class RutrackerService {
       return {
         cookies: this.cookies,
         body,
+        statusCode: response.status,
       };
     } catch (error) {
       console.error('Error visiting RuTracker:', error.message);
@@ -99,5 +202,51 @@ export class RutrackerService {
    */
   async visitMainPage(): Promise<PageVisitResult> {
     return this.visit('index.php');
+  }
+
+  /**
+   * Login to RuTracker using configured credentials
+   * @returns Promise with login result
+   */
+  async login(): Promise<boolean> {
+    try {
+      // First visit the login page to get any required cookies
+      await this.visitMainPage();
+
+      // Prepare login form data
+      const formData = new URLSearchParams();
+      formData.append('login_username', this.username);
+      formData.append('login_password', this.password);
+      formData.append('login', '\u0432\u0445\u043e\u0434');
+
+      // Submit login form WITHOUT allowing redirects to capture cookies
+      await this.visit('login.php', 'POST', formData, false);
+
+      // Check if bb_session cookie was set after login attempt
+      const bbSessionCookie = this.cookies.find(cookie => cookie.name === 'bb_session');
+      const isSuccess = !!bbSessionCookie;
+
+      this.isLoggedIn = isSuccess;
+
+      if (isSuccess) {
+        console.log('Successfully logged into RuTracker');
+      } else {
+        console.error('Failed to login to RuTracker - bb_session cookie not found');
+      }
+
+      return isSuccess;
+    } catch (error) {
+      console.error('Error during RuTracker login:', error.message);
+      this.isLoggedIn = false;
+      return false;
+    }
+  }
+
+  /**
+   * Check if the service is currently logged in
+   * @returns Current login status
+   */
+  getLoginStatus(): boolean {
+    return this.isLoggedIn;
   }
 }

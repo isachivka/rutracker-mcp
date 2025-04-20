@@ -17,6 +17,9 @@ describe('RutrackerService', () => {
     }).compile();
 
     service = module.get<RutrackerService>(RutrackerService);
+
+    // Manually call onModuleInit to load cookies from file
+    await service.onModuleInit();
   });
 
   it('should be defined', () => {
@@ -62,5 +65,36 @@ describe('RutrackerService', () => {
       await service.visitMainPage();
       expect(visitSpy).toHaveBeenCalledWith('index.php');
     });
+  });
+
+  describe('login', () => {
+    // This test performs a real login request to rutracker for debugging purposes
+    it('should login to rutracker with credentials from env', async () => {
+      // Check initial login status (should be determined by cookies from file)
+      console.log('Initial login status:', service.getLoginStatus());
+      console.log('Initial cookies:', (service as any).cookies);
+
+      // Only perform login if not already logged in
+      let result = service.getLoginStatus();
+
+      if (!result) {
+        console.log('Not logged in, attempting login...');
+        // Perform the actual login
+        result = await service.login();
+        console.log('Login attempt result:', result);
+      } else {
+        console.log('Already logged in from cookie file, skipping login');
+      }
+
+      // Final login status
+      console.log('Final login status:', service.getLoginStatus());
+
+      // If bb_session cookie exists in the stored cookies, login is successful
+      const cookies = (service as any).cookies;
+      const bbSessionCookie = cookies.find((c: Cookie) => c.name === 'bb_session');
+      console.log('bb_session cookie:', bbSessionCookie);
+
+      // No assertions here, just for debugging
+    }, 30000); // Increase timeout to 30 seconds for external request
   });
 });

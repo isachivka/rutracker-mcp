@@ -17,4 +17,5 @@ export interface Cookie {
 export interface PageVisitResult {
   cookies: Cookie[];
   body: string;
+  statusCode?: number;
 }
