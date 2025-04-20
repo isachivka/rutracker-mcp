@@ -109,7 +109,7 @@ class rutracker:
         form_data = {
             "login_username": "...",
             "login_password": "...",
-            "login": "\u0432\u0445\u043e\u0434"  # вход в cp1251 ("вход")
+            "login": "\u0432\u0445\u043e\u0434"  # login in cp1251 ("login")
         }
 
         data_encoded = urlencode(form_data, encoding="cp1251").encode()
@@ -187,10 +187,10 @@ class rutracker:
                 if magnet_match:
                     magnet_link = magnet_match.group(1)
                 else:
-                    logger.warning("Magnet-ссылка не найдена в теме, используем стандартную ссылку для скачивания")
+                    logger.warning("Magnet link not found in the topic, using standard download link")
                     magnet_link = self.url_dl + tor[0]
             except Exception as e:
-                logger.exception("Ошибка при получении magnet-ссылки со страницы темы")
+                logger.exception("Error when getting magnet link from the topic page")
                 magnet_link = self.url_dl + tor[0]
 
             prettyPrinter({
@@ -352,7 +352,7 @@ logging.basicConfig(
     level=logging.DEBUG
 )
 
-file_handler = logging.FileHandler(log_file, mode="a")  # режим "a" для добавления записей
+file_handler = logging.FileHandler(log_file, mode="a")
 formatter = logging.Formatter("%(asctime)s %(name)-12s %(levelname)-8s %(message)s", datefmt="%m-%d %H:%M")
 file_handler.setFormatter(formatter)
 

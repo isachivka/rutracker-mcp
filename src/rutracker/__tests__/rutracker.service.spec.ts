@@ -13,27 +13,27 @@ describe('RutrackerService', () => {
     service = module.get<RutrackerService>(RutrackerService);
   });
 
-  it('должен быть определен', () => {
+  it('should be defined', () => {
     expect(service).toBeDefined();
   });
 
   describe('visit', () => {
-    it('должен успешно подключиться к сайту и получить куки и тело страницы', async () => {
-      // Выполняем реальный запрос к сайту
+    it('should successfully connect to the site and get cookies and page body', async () => {
+      // Executing a real request to the site
       const result = await service.visit('index.php');
 
-      // Проверяем, что метод возвращает объект с cookies и body
+      // Checking that the method returns an object with cookies and body
       expect(result).toHaveProperty('cookies');
       expect(result).toHaveProperty('body');
 
-      // Проверяем, что cookies это массив
+      // Checking that cookies is an array
       expect(Array.isArray(result.cookies)).toBe(true);
 
-      // Проверяем, что body это непустая строка
+      // Checking that body is a non-empty string
       expect(typeof result.body).toBe('string');
       expect(result.body.length).toBeGreaterThan(0);
 
-      // Проверяем структуру Cookie объектов, если куки были получены
+      // Checking the structure of Cookie objects if cookies were received
       if (result.cookies.length > 0) {
         result.cookies.forEach((cookie: Cookie) => {
           expect(cookie).toHaveProperty('name');
@@ -42,12 +42,12 @@ describe('RutrackerService', () => {
           expect(cookie).toHaveProperty('path');
         });
       }
-    }, 30000); // Увеличиваем таймаут до 30 секунд для внешнего запроса
+    }, 30000); // Increasing timeout to 30 seconds for external request
   });
 
   describe('visitMainPage', () => {
-    it('должен вызывать метод visit с правильными параметрами', async () => {
-      // Используем шпион для проверки вызова visit с правильными параметрами
+    it('should call the visit method with correct parameters', async () => {
+      // Using a spy to check if visit is called with correct parameters
       const visitSpy = jest.spyOn(service, 'visit').mockResolvedValueOnce({
         cookies: [],
         body: 'test body',
