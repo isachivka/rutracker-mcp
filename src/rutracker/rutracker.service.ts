@@ -3,16 +3,21 @@ import axios, { AxiosRequestConfig, Method } from 'axios';
 import { Cookie, PageVisitResult } from './interfaces/rutracker.interface';
 import { parseCookies } from './utils/cookie.utils';
 import * as iconv from 'iconv-lite';
+import { ConfigService } from '@nestjs/config';
+import { CONFIG } from '../config';
 
 @Injectable()
 export class RutrackerService {
   private cookies: Cookie[] = [];
   private rawCookies: string[] = [];
+  private readonly baseUrl: string;
 
-  /**
-   * Base URL for RuTracker
-   */
-  private readonly baseUrl = 'https://rutracker.org/forum/';
+  constructor(private configService: ConfigService) {
+    this.baseUrl = this.configService.get<string>(
+      CONFIG.RUTRACKER.BASE_URL,
+      'https://rutracker.org/forum/',
+    );
+  }
 
   /**
    * Generic method to visit any page on RuTracker

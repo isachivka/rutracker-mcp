@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
 import { RutrackerModule } from './rutracker/rutracker.module';
+import { ConfigModule } from './config';
 
 @Module({
-  imports: [RutrackerModule],
+  imports: [ConfigModule, RutrackerModule],
   controllers: [],
   providers: [],
 })
