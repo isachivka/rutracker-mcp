@@ -1,6 +1,12 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import axios, { AxiosRequestConfig, Method } from 'axios';
-import { Cookie, PageVisitResult } from './interfaces/rutracker.interface';
+import {
+  Cookie,
+  PageVisitResult,
+  SearchOptions,
+  SearchResponse,
+  TorrentSearchResult,
+} from './interfaces/rutracker.interface';
 import { parseCookies } from './utils/cookie.utils';
 import * as iconv from 'iconv-lite';
 import { ConfigService } from '@nestjs/config';
@@ -18,6 +24,16 @@ export class RutrackerService implements OnModuleInit {
   private isLoggedIn: boolean = false;
   private readonly cookieFilePath: string;
   private isReloggingIn: boolean = false; // Flag to prevent login recursion
+
+  // RegExp patterns for searching
+  private readonly RE_TORRENTS = new RegExp(
+    '<a\\sdata-topic_id="(\\d+?)".+?">(.+?)</a.+?tor-size"\\sdata-ts_text="(\\d+?)">.+?data-ts_text="([-\\d]+?)">.+?Личи">(\\d+?)</.+?data-ts_text="(\\d+?)">',
+    'gs',
+  );
+  private readonly RE_RESULTS = new RegExp('Результатов\\sпоиска:\\s(\\d{1,3})\\s<span', 's');
+  private readonly SEARCH_PATTERN = '%stracker.php?nm=%s';
+  private readonly PAGE_PATTERN = '%s&start=%s';
+  private readonly RESULTS_PER_PAGE = 50;
 
   constructor(private configService: ConfigService) {
     this.baseUrl = this.configService.get<string>(
@@ -296,5 +312,175 @@ export class RutrackerService implements OnModuleInit {
    */
   getLoginStatus(): boolean {
     return this.isLoggedIn;
+  }
+
+  /**
+   * Search for torrents on RuTracker
+   * @param options Search options
+   * @returns Promise with search results
+   */
+  async search(options: SearchOptions): Promise<SearchResponse> {
+    const { query, page = 1, resultsPerPage = this.RESULTS_PER_PAGE } = options;
+
+    if (!this.isLoggedIn) {
+      console.log('Not logged in, attempting to login');
+      const loginSuccess = await this.login();
+      if (!loginSuccess) {
+        throw new Error('Failed to login to RuTracker, cannot search');
+      }
+    }
+
+    try {
+      // Encode query for URL
+      const encodedQuery = encodeURIComponent(query);
+
+      // Calculate start parameter for pagination
+      const start = (page - 1) * this.RESULTS_PER_PAGE;
+
+      // Build search URL
+      let searchUrl = `tracker.php?nm=${encodedQuery}`;
+      if (start > 0) {
+        searchUrl += `&start=${start}`;
+      }
+
+      // Perform search request
+      const searchResult = await this.visit(searchUrl);
+
+      // Process search results
+      const results = await this.parseSearchResults(searchResult.body);
+
+      // Extract total results from the page
+      let totalResults = 0;
+      const resultsMatch = this.RE_RESULTS.exec(searchResult.body);
+      if (resultsMatch && resultsMatch[1]) {
+        totalResults = parseInt(resultsMatch[1], 10);
+      }
+
+      // Calculate if there are more pages
+      const hasMorePages = totalResults > page * resultsPerPage;
+
+      return {
+        results,
+        totalResults,
+        page,
+        hasMorePages,
+      };
+    } catch (error) {
+      console.error('Error searching RuTracker:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Search all pages for a query
+   * @param options Search options
+   * @returns Promise with all search results
+   */
+  async searchAllPages(options: SearchOptions): Promise<TorrentSearchResult[]> {
+    const firstPageResults = await this.search(options);
+
+    // If there's only one page, return the results
+    if (!firstPageResults.hasMorePages) {
+      return firstPageResults.results;
+    }
+
+    // Calculate total pages
+    const totalPages = Math.ceil(
+      firstPageResults.totalResults / (options.resultsPerPage || this.RESULTS_PER_PAGE),
+    );
+
+    // Create an array of promises for remaining pages
+    const pagePromises = [];
+    for (let i = 2; i <= totalPages; i++) {
+      const pageOptions = { ...options, page: i };
+      pagePromises.push(this.search(pageOptions));
+    }
+
+    // Execute all promises concurrently
+    const remainingResults = await Promise.all(pagePromises);
+
+    // Combine all results
+    const allResults = [
+      ...firstPageResults.results,
+      ...remainingResults.flatMap(result => result.results),
+    ];
+
+    return allResults;
+  }
+
+  /**
+   * Parse search results from HTML
+   * @param html HTML content from search page
+   * @returns Array of parsed torrent results
+   */
+  private async parseSearchResults(html: string): Promise<TorrentSearchResult[]> {
+    const results: TorrentSearchResult[] = [];
+
+    // Use regex to extract torrent information
+    const regex =
+      /<a\sdata-topic_id="(\d+?)".+?>(.+?)<\/a.+?tor-size"\sdata-ts_text="(\d+?)">.+?data-ts_text="([-\d]+?)">.+?Личи">(\d+?)<\/.+?data-ts_text="(\d+?)">/gs;
+
+    let match;
+    while ((match = regex.exec(html)) !== null) {
+      const [, id, name, size, seedersStr, leechers, pubDateStr] = match;
+
+      // Some entries might have negative seeders indicating issues, so we handle that
+      const seeders = Math.max(0, parseInt(seedersStr, 10));
+
+      const result: TorrentSearchResult = {
+        id,
+        name: this.decodeHtmlEntities(name),
+        size,
+        seeders,
+        leechers: parseInt(leechers, 10),
+        pubDate: parseInt(pubDateStr, 10),
+        downloadLink: `${this.baseUrl}dl.php?t=${id}`,
+        topicLink: `${this.baseUrl}viewtopic.php?t=${id}`,
+      };
+
+      results.push(result);
+    }
+
+    return results;
+  }
+
+  /**
+   * Get magnet link for a torrent
+   * @param topicId Topic ID of the torrent
+   * @returns Promise with magnet link
+   */
+  async getMagnetLink(topicId: string): Promise<string> {
+    try {
+      const topicUrl = `viewtopic.php?t=${topicId}`;
+      const response = await this.visit(topicUrl);
+
+      // Extract magnet link from the topic page
+      const magnetRegex = /href="(magnet:\?xt=urn:btih:[^"]+)"/;
+      const match = magnetRegex.exec(response.body);
+
+      if (match && match[1]) {
+        return match[1];
+      }
+
+      throw new Error('Magnet link not found in the topic page');
+    } catch (error) {
+      console.error(`Error getting magnet link for topic ${topicId}:`, error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Decode HTML entities in a string
+   * @param text Text with HTML entities
+   * @returns Decoded text
+   */
+  private decodeHtmlEntities(text: string): string {
+    // Basic HTML entity decoding
+    return text
+      .replace(/&quot;/g, '"')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(code));
   }
 }

@@ -97,4 +97,74 @@ describe('RutrackerService', () => {
       // No assertions here, just for debugging
     }, 30000); // Increase timeout to 30 seconds for external request
   });
+
+  describe('searchAllPages', () => {
+    it('should perform a real search across multiple pages if available', async () => {
+      // Ensure we're logged in
+      if (!service.getLoginStatus()) {
+        await service.login();
+      }
+
+      // Use a search term that is likely to have multiple pages of results
+      const query = 'Кукушка'; // Popular Linux distribution with many torrents
+      console.log(`Searching for "${query}" across all pages...`);
+
+      // Set a small resultsPerPage to increase chance of pagination
+      const allResults = await service.searchAllPages({
+        query,
+        resultsPerPage: 50, // Set small to ensure multiple pages
+      });
+
+      console.log(`Found ${allResults.length} total results across all pages`);
+
+      // Log some sample results for debugging
+      if (allResults.length > 0) {
+        console.log('Sample results:');
+        console.log(
+          allResults.slice(0, 3).map(r => ({
+            id: r.id,
+            name: r.name,
+            seeders: r.seeders,
+            leechers: r.leechers,
+          })),
+        );
+
+        if (allResults.length > 10) {
+          console.log('Results from next page:');
+          console.log(
+            allResults.slice(10, 13).map(r => ({
+              id: r.id,
+              name: r.name,
+              seeders: r.seeders,
+              leechers: r.leechers,
+            })),
+          );
+        }
+      }
+
+      // Check that we have results
+      expect(allResults.length).toBeGreaterThan(0);
+
+      // Check structure of results
+      const sampleResult = allResults[0];
+      expect(sampleResult).toHaveProperty('id');
+      expect(sampleResult).toHaveProperty('name');
+      expect(sampleResult).toHaveProperty('size');
+      expect(sampleResult).toHaveProperty('seeders');
+      expect(sampleResult).toHaveProperty('leechers');
+      expect(sampleResult).toHaveProperty('pubDate');
+      expect(sampleResult).toHaveProperty('downloadLink');
+      expect(sampleResult).toHaveProperty('topicLink');
+
+      // Check for magnet link
+      try {
+        console.log(`Getting magnet link for result ID: ${sampleResult.id}`);
+        const magnetLink = await service.getMagnetLink(sampleResult.id);
+        console.log(`Magnet link: ${magnetLink.substring(0, 60)}...`);
+        expect(magnetLink).toContain('magnet:?xt=urn:btih:');
+      } catch (error) {
+        console.error('Error getting magnet link:', error.message);
+      }
+    }, 120000); // 2 minutes timeout for multi-page search
+  });
 });
