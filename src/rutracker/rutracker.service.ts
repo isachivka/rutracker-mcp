@@ -23,22 +23,23 @@ export class RutrackerService {
    */
   async visit(page: string, method: Method = 'GET', data?: any): Promise<PageVisitResult> {
     const url = this.baseUrl + page;
-    
+
     try {
       const options: AxiosRequestConfig = {
         method,
         url,
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
+          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
           'Accept-Language': 'en-US,en;q=0.5',
           'Accept-Encoding': 'gzip, deflate, br',
-          'Connection': 'keep-alive',
+          Connection: 'keep-alive',
           'Upgrade-Insecure-Requests': '1',
           'Cache-Control': 'max-age=0',
         },
         maxRedirects: 5,
-        validateStatus: (status) => status < 400, // Only reject if status code is >= 400
+        validateStatus: status => status < 400, // Only reject if status code is >= 400
         responseType: 'arraybuffer', // Important for correct encoding handling
       };
 
@@ -52,9 +53,9 @@ export class RutrackerService {
       if (data && method !== 'GET') {
         options.data = data;
       }
-      
+
       const response = await axios(options);
-      
+
       // Extract cookies from response
       const setCookieHeaders = response.headers['set-cookie'];
       if (setCookieHeaders) {
@@ -62,11 +63,11 @@ export class RutrackerService {
         this.cookies = parseCookies(setCookieHeaders);
         console.log('Cookies saved:', this.cookies);
       }
-      
+
       // Convert body from Windows-1251 to UTF-8
       const contentType = response.headers['content-type'] || '';
       let body = '';
-      
+
       if (response.data) {
         // Check if content-type header indicates Windows-1251 encoding
         if (contentType.includes('windows-1251') || contentType.includes('charset=windows-1251')) {
@@ -76,10 +77,10 @@ export class RutrackerService {
           body = iconv.decode(Buffer.from(response.data), 'win1251');
         }
       }
-      
+
       return {
         cookies: this.cookies,
-        body
+        body,
       };
     } catch (error) {
       console.error('Error visiting RuTracker:', error.message);
@@ -94,4 +95,4 @@ export class RutrackerService {
   async visitMainPage(): Promise<PageVisitResult> {
     return this.visit('index.php');
   }
-} 
+}

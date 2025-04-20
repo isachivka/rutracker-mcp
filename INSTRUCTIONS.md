@@ -1,9 +1,11 @@
 # Development Instructions
 
 ## Architecture Overview
+
 This application implements the Model Context Protocol (MCP) with a client-server architecture. The backend is built with Nest.js, providing a structured and modular approach to development.
 
 ## Development History
+
 - Initial project structure with Nest.js framework
 - Added RuTracker module with basic functionality
 - Implemented cookie management and HTTP request handling
@@ -11,6 +13,7 @@ This application implements the Model Context Protocol (MCP) with a client-serve
 - Refactored to remove controller and simplify service API
 
 ## Project Structure
+
 ```
 src/
 ├── app.controller.ts        # Main application controller
@@ -27,16 +30,19 @@ src/
 ## Development Workflow
 
 ### Setup
+
 1. Clone the repository
 2. Run `npm install` to install dependencies
 3. Copy `.env.example` to `.env` and configure environment variables
 
 ### Running Locally
+
 ```bash
 npm run start:dev
 ```
 
 ### Testing
+
 ```bash
 npm run test              # Run unit tests
 npm run test:watch        # Run tests in watch mode
@@ -45,12 +51,14 @@ npm run test:e2e          # Run end-to-end tests
 ```
 
 ### Building for Production
+
 ```bash
 npm run build
 npm run start:prod
 ```
 
 ## Coding Standards
+
 - Use TypeScript for type safety
 - Follow Nest.js best practices
 - Write unit tests for all functionality
@@ -58,6 +66,7 @@ npm run start:prod
 - Update documentation when making significant changes
 
 ## Documentation Management
+
 - Keep the README.md updated with high-level overview
 - Maintain this INSTRUCTIONS.md for detailed development information
 - Document all major architecture decisions
@@ -65,11 +74,13 @@ npm run start:prod
 ## RuTracker Module
 
 ### Overview
+
 The RuTracker module provides functionality to interact with the RuTracker website in an ethical and respectful manner. It handles sessions, cookie management, and content retrieval.
 
 ### Components
 
 #### RutrackerService
+
 The core service responsible for website interaction.
 
 ```typescript
@@ -79,6 +90,7 @@ visit(page: string, method: string = 'GET', data?: object): Promise<{ cookies: C
 ```
 
 #### Cookie Utilities
+
 Helper functions for cookie management:
 
 ```typescript
@@ -90,6 +102,7 @@ cookiesArrayToString(cookies: CookieType[]): string
 ```
 
 ### Ethical Web Scraping Guidelines
+
 1. Respect the website's terms of service
 2. Implement reasonable request rates to avoid overloading servers
 3. Identify your requests properly
@@ -97,6 +110,7 @@ cookiesArrayToString(cookies: CookieType[]): string
 5. Only extract publicly available information
 
 ### Error Handling
+
 The module implements comprehensive error handling for network issues, unexpected responses, and other common scenarios. Errors are appropriately propagated with meaningful messages.
 
 ### Usage Examples
@@ -118,4 +132,4 @@ const loginResult = await this.rutrackerService.visit('login.php', 'POST', {
   username: 'user',
   password: 'pass'
 });
-``` 
+```

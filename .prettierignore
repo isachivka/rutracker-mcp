@@ -1,0 +1,17 @@
+# Build files
+dist/
+build/
+coverage/
+
+# Dependencies
+node_modules/
+
+# Package manager files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Misc
+.DS_Store
+.env
+.env.* 

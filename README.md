@@ -1,9 +1,11 @@
 # RuTracker MCP
 
 ## Project Overview
+
 This is a Nest.js based backend implementing the Model Context Protocol (MCP) for the RuTracker ecosystem. MCP standardizes how applications provide context to Large Language Models (LLMs).
 
 ## Key Features
+
 - Implements the open Model Context Protocol
 - Provides specialized integrations for the RuTracker ecosystem
 - Built with Nest.js for reliability and scalability
@@ -12,22 +14,26 @@ This is a Nest.js based backend implementing the Model Context Protocol (MCP) fo
 ## Getting Started
 
 ### Installation
+
 ```bash
 npm install
 ```
 
 ### Development
+
 ```bash
 npm run start:dev
 ```
 
 ### Testing
+
 ```bash
 npm run test
 npm run test:e2e
 ```
 
 ### Production Build
+
 ```bash
 npm run build
 npm run start:prod
@@ -40,6 +46,7 @@ For detailed information about the project architecture, development standards, 
 ## Project Modules
 
 ### RuTracker Module
+
 The RuTracker module provides functionality to interact with the RuTracker website:
 
 - Emulates browser behavior for web requests
@@ -48,6 +55,7 @@ The RuTracker module provides functionality to interact with the RuTracker websi
 - Automatically detects and converts Win-1251 encoding
 
 #### Example Usage
+
 ```typescript
 // Inject the service in your class
 constructor(private readonly rutrackerService: RutrackerService) {}
@@ -66,4 +74,4 @@ const loginResult = await this.rutrackerService.visit('login.php', 'POST', {
 
 // Get the page content and cookies
 const { body, cookies } = result;
-``` 
+```

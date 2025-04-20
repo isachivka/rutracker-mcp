@@ -8,20 +8,20 @@ import { Cookie } from '../interfaces/rutracker.interface';
 export function parseCookie(cookieString: string): Cookie {
   const parts = cookieString.split(';').map(part => part.trim());
   const [nameValue, ...attributes] = parts;
-  
+
   const [name, value] = nameValue.split('=');
-  
+
   const cookie: Cookie = {
     name,
     value,
     domain: '',
-    path: '/'
+    path: '/',
   };
-  
+
   attributes.forEach(attribute => {
     const [key, val] = attribute.split('=');
     const keyLower = key.toLowerCase();
-    
+
     if (keyLower === 'domain') {
       cookie.domain = val || '';
     } else if (keyLower === 'path') {
@@ -34,7 +34,7 @@ export function parseCookie(cookieString: string): Cookie {
       cookie.secure = true;
     }
   });
-  
+
   return cookie;
 }
 
@@ -44,9 +44,7 @@ export function parseCookie(cookieString: string): Cookie {
  * @returns Cookie header string
  */
 export function cookiesToString(cookies: Cookie[]): string {
-  return cookies
-    .map(cookie => `${cookie.name}=${cookie.value}`)
-    .join('; ');
+  return cookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
 }
 
 /**
@@ -54,6 +52,7 @@ export function cookiesToString(cookies: Cookie[]): string {
  * @param cookieStrings Array of Set-Cookie header strings
  * @returns Array of Cookie objects
  */
+
 export function parseCookies(cookieStrings: string[]): Cookie[] {
   return cookieStrings.map(parseCookie);
-} 
+}

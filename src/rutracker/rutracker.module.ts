@@ -5,4 +5,4 @@ import { RutrackerService } from './rutracker.service';
   providers: [RutrackerService],
   exports: [RutrackerService],
 })
-export class RutrackerModule {} 
+export class RutrackerModule {}

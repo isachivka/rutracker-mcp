@@ -1,6 +1,7 @@
 # MCP TypeScript SDK ![NPM Version](https://img.shields.io/npm/v/%40modelcontextprotocol%2Fsdk) ![MIT licensed](https://img.shields.io/npm/l/%40modelcontextprotocol%2Fsdk)
 
 ## Table of Contents
+
 - [Overview](#overview)
 - [Installation](#installation)
 - [Quickstart](#quickstart)
@@ -44,34 +45,33 @@ npm install @modelcontextprotocol/sdk
 Let's create a simple MCP server that exposes a calculator tool and some data:
 
 ```typescript
-import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { z } from "zod";
+import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { z } from 'zod';
 
 // Create an MCP server
 const server = new McpServer({
-  name: "Demo",
-  version: "1.0.0"
+  name: 'Demo',
+  version: '1.0.0',
 });
 
 // Add an addition tool
-server.tool("add",
-  { a: z.number(), b: z.number() },
-  async ({ a, b }) => ({
-    content: [{ type: "text", text: String(a + b) }]
-  })
-);
+server.tool('add', { a: z.number(), b: z.number() }, async ({ a, b }) => ({
+  content: [{ type: 'text', text: String(a + b) }],
+}));
 
 // Add a dynamic greeting resource
 server.resource(
-  "greeting",
-  new ResourceTemplate("greeting://{name}", { list: undefined }),
+  'greeting',
+  new ResourceTemplate('greeting://{name}', { list: undefined }),
   async (uri, { name }) => ({
-    contents: [{
-      uri: uri.href,
-      text: `Hello, ${name}!`
-    }]
-  })
+    contents: [
+      {
+        uri: uri.href,
+        text: `Hello, ${name}!`,
+      },
+    ],
+  }),
 );
 
 // Start receiving messages on stdin and sending messages on stdout
@@ -96,8 +96,8 @@ The McpServer is your core interface to the MCP protocol. It handles connection 
 
 ```typescript
 const server = new McpServer({
-  name: "My App",
-  version: "1.0.0"
+  name: 'My App',
+  version: '1.0.0',
 });
 ```
 
@@ -107,27 +107,27 @@ Resources are how you expose data to LLMs. They're similar to GET endpoints in a
 
 ```typescript
 // Static resource
-server.resource(
-  "config",
-  "config://app",
-  async (uri) => ({
-    contents: [{
+server.resource('config', 'config://app', async uri => ({
+  contents: [
+    {
       uri: uri.href,
-      text: "App configuration here"
-    }]
-  })
-);
+      text: 'App configuration here',
+    },
+  ],
+}));
 
 // Dynamic resource with parameters
 server.resource(
-  "user-profile",
-  new ResourceTemplate("users://{userId}/profile", { list: undefined }),
+  'user-profile',
+  new ResourceTemplate('users://{userId}/profile', { list: undefined }),
   async (uri, { userId }) => ({
-    contents: [{
-      uri: uri.href,
-      text: `Profile data for user ${userId}`
-    }]
-  })
+    contents: [
+      {
+        uri: uri.href,
+        text: `Profile data for user ${userId}`,
+      },
+    ],
+  }),
 );
 ```
 
@@ -138,31 +138,29 @@ Tools let LLMs take actions through your server. Unlike resources, tools are exp
 ```typescript
 // Simple tool with parameters
 server.tool(
-  "calculate-bmi",
+  'calculate-bmi',
   {
     weightKg: z.number(),
-    heightM: z.number()
+    heightM: z.number(),
   },
   async ({ weightKg, heightM }) => ({
-    content: [{
-      type: "text",
-      text: String(weightKg / (heightM * heightM))
-    }]
-  })
+    content: [
+      {
+        type: 'text',
+        text: String(weightKg / (heightM * heightM)),
+      },
+    ],
+  }),
 );
 
 // Async tool with external API call
-server.tool(
-  "fetch-weather",
-  { city: z.string() },
-  async ({ city }) => {
-    const response = await fetch(`https://api.weather.com/${city}`);
-    const data = await response.text();
-    return {
-      content: [{ type: "text", text: data }]
-    };
-  }
-);
+server.tool('fetch-weather', { city: z.string() }, async ({ city }) => {
+  const response = await fetch(`https://api.weather.com/${city}`);
+  const data = await response.text();
+  return {
+    content: [{ type: 'text', text: data }],
+  };
+});
 ```
 
 ### Prompts
@@ -170,19 +168,17 @@ server.tool(
 Prompts are reusable templates that help LLMs interact with your server effectively:
 
 ```typescript
-server.prompt(
-  "review-code",
-  { code: z.string() },
-  ({ code }) => ({
-    messages: [{
-      role: "user",
+server.prompt('review-code', { code: z.string() }, ({ code }) => ({
+  messages: [
+    {
+      role: 'user',
       content: {
-        type: "text",
-        text: `Please review this code:\n\n${code}`
-      }
-    }]
-  })
-);
+        type: 'text',
+        text: `Please review this code:\n\n${code}`,
+      },
+    },
+  ],
+}));
 ```
 
 ## Running Your Server
@@ -194,12 +190,12 @@ MCP servers in TypeScript need to be connected to a transport to communicate wit
 For command-line tools and direct integrations:
 
 ```typescript
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
 const server = new McpServer({
-  name: "example-server",
-  version: "1.0.0"
+  name: 'example-server',
+  version: '1.0.0',
 });
 
 // ... set up server resources, tools, and prompts ...
@@ -217,12 +213,11 @@ For remote servers, set up a Streamable HTTP transport that handles both client 
 In some cases, servers need to be stateful. This is achieved by [session management](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#session-management).
 
 ```typescript
-import express from "express";
-import { randomUUID } from "node:crypto";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { InMemoryEventStore } from "@modelcontextprotocol/sdk/inMemory.js";
-
+import express from 'express';
+import { randomUUID } from 'node:crypto';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { InMemoryEventStore } from '@modelcontextprotocol/sdk/inMemory.js';
 
 const app = express();
 app.use(express.json());
@@ -245,10 +240,10 @@ app.post('/mcp', async (req, res) => {
     transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
       eventStore, // Enable resumability
-      onsessioninitialized: (sessionId) => {
+      onsessioninitialized: sessionId => {
         // Store the transport by session ID
         transports[sessionId] = transport;
-      }
+      },
     });
 
     // Clean up transport when closed
@@ -258,8 +253,8 @@ app.post('/mcp', async (req, res) => {
       }
     };
     const server = new McpServer({
-      name: "example-server",
-      version: "1.0.0"
+      name: 'example-server',
+      version: '1.0.0',
     });
 
     // ... set up server resources, tools, and prompts ...
@@ -290,7 +285,7 @@ const handleSessionRequest = async (req: express.Request, res: express.Response)
     res.status(400).send('Invalid or missing session ID');
     return;
   }
-  
+
   const transport = transports[sessionId];
   await transport.handleRequest(req, res);
 };
@@ -324,7 +319,7 @@ const setupServer = async () => {
 app.post('/mcp', async (req: Request, res: Response) => {
   console.log('Received MCP request:', req.body);
   try {
-      await transport.handleRequest(req, res, req.body);
+    await transport.handleRequest(req, res, req.body);
   } catch (error) {
     console.error('Error handling MCP request:', error);
     if (!res.headersSent) {
@@ -342,42 +337,48 @@ app.post('/mcp', async (req: Request, res: Response) => {
 
 app.get('/mcp', async (req: Request, res: Response) => {
   console.log('Received GET MCP request');
-  res.writeHead(405).end(JSON.stringify({
-    jsonrpc: "2.0",
-    error: {
-      code: -32000,
-      message: "Method not allowed."
-    },
-    id: null
-  }));
+  res.writeHead(405).end(
+    JSON.stringify({
+      jsonrpc: '2.0',
+      error: {
+        code: -32000,
+        message: 'Method not allowed.',
+      },
+      id: null,
+    }),
+  );
 });
 
 app.delete('/mcp', async (req: Request, res: Response) => {
   console.log('Received DELETE MCP request');
-  res.writeHead(405).end(JSON.stringify({
-    jsonrpc: "2.0",
-    error: {
-      code: -32000,
-      message: "Method not allowed."
-    },
-    id: null
-  }));
+  res.writeHead(405).end(
+    JSON.stringify({
+      jsonrpc: '2.0',
+      error: {
+        code: -32000,
+        message: 'Method not allowed.',
+      },
+      id: null,
+    }),
+  );
 });
 
 // Start the server
 const PORT = 3000;
-setupServer().then(() => {
-  app.listen(PORT, () => {
-    console.log(`MCP Streamable HTTP Server listening on port ${PORT}`);
+setupServer()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`MCP Streamable HTTP Server listening on port ${PORT}`);
+    });
+  })
+  .catch(error => {
+    console.error('Failed to set up the server:', error);
+    process.exit(1);
   });
-}).catch(error => {
-  console.error('Failed to set up the server:', error);
-  process.exit(1);
-});
-
 ```
 
 This stateless approach is useful for:
+
 - Simple API wrappers
 - RESTful scenarios where each request is independent
 - Horizontally scaled deployments without shared session state
@@ -393,46 +394,42 @@ To test your server, you can use the [MCP Inspector](https://github.com/modelcon
 A simple server demonstrating resources, tools, and prompts:
 
 ```typescript
-import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
+import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
 
 const server = new McpServer({
-  name: "Echo",
-  version: "1.0.0"
+  name: 'Echo',
+  version: '1.0.0',
 });
 
 server.resource(
-  "echo",
-  new ResourceTemplate("echo://{message}", { list: undefined }),
+  'echo',
+  new ResourceTemplate('echo://{message}', { list: undefined }),
   async (uri, { message }) => ({
-    contents: [{
-      uri: uri.href,
-      text: `Resource echo: ${message}`
-    }]
-  })
+    contents: [
+      {
+        uri: uri.href,
+        text: `Resource echo: ${message}`,
+      },
+    ],
+  }),
 );
 
-server.tool(
-  "echo",
-  { message: z.string() },
-  async ({ message }) => ({
-    content: [{ type: "text", text: `Tool echo: ${message}` }]
-  })
-);
+server.tool('echo', { message: z.string() }, async ({ message }) => ({
+  content: [{ type: 'text', text: `Tool echo: ${message}` }],
+}));
 
-server.prompt(
-  "echo",
-  { message: z.string() },
-  ({ message }) => ({
-    messages: [{
-      role: "user",
+server.prompt('echo', { message: z.string() }, ({ message }) => ({
+  messages: [
+    {
+      role: 'user',
       content: {
-        type: "text",
-        text: `Please process this message: ${message}`
-      }
-    }]
-  })
-);
+        type: 'text',
+        text: `Please process this message: ${message}`,
+      },
+    },
+  ],
+}));
 ```
 
 ### SQLite Explorer
@@ -440,73 +437,69 @@ server.prompt(
 A more complex example showing database integration:
 
 ```typescript
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import sqlite3 from "sqlite3";
-import { promisify } from "util";
-import { z } from "zod";
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import sqlite3 from 'sqlite3';
+import { promisify } from 'util';
+import { z } from 'zod';
 
 const server = new McpServer({
-  name: "SQLite Explorer",
-  version: "1.0.0"
+  name: 'SQLite Explorer',
+  version: '1.0.0',
 });
 
 // Helper to create DB connection
 const getDb = () => {
-  const db = new sqlite3.Database("database.db");
+  const db = new sqlite3.Database('database.db');
   return {
     all: promisify<string, any[]>(db.all.bind(db)),
-    close: promisify(db.close.bind(db))
+    close: promisify(db.close.bind(db)),
   };
 };
 
-server.resource(
-  "schema",
-  "schema://main",
-  async (uri) => {
-    const db = getDb();
-    try {
-      const tables = await db.all(
-        "SELECT sql FROM sqlite_master WHERE type='table'"
-      );
-      return {
-        contents: [{
+server.resource('schema', 'schema://main', async uri => {
+  const db = getDb();
+  try {
+    const tables = await db.all("SELECT sql FROM sqlite_master WHERE type='table'");
+    return {
+      contents: [
+        {
           uri: uri.href,
-          text: tables.map((t: {sql: string}) => t.sql).join("\n")
-        }]
-      };
-    } finally {
-      await db.close();
-    }
+          text: tables.map((t: { sql: string }) => t.sql).join('\n'),
+        },
+      ],
+    };
+  } finally {
+    await db.close();
   }
-);
+});
 
-server.tool(
-  "query",
-  { sql: z.string() },
-  async ({ sql }) => {
-    const db = getDb();
-    try {
-      const results = await db.all(sql);
-      return {
-        content: [{
-          type: "text",
-          text: JSON.stringify(results, null, 2)
-        }]
-      };
-    } catch (err: unknown) {
-      const error = err as Error;
-      return {
-        content: [{
-          type: "text",
-          text: `Error: ${error.message}`
-        }],
-        isError: true
-      };
-    } finally {
-      await db.close();
-    }
+server.tool('query', { sql: z.string() }, async ({ sql }) => {
+  const db = getDb();
+  try {
+    const results = await db.all(sql);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(results, null, 2),
+        },
+      ],
+    };
+  } catch (err: unknown) {
+    const error = err as Error;
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Error: ${error.message}`,
+        },
+      ],
+      isError: true,
+    };
+  } finally {
+    await db.close();
   }
-);
+});
 ```
 
 ## Advanced Usage
@@ -516,57 +509,57 @@ server.tool(
 If you want to offer an initial set of tools/prompts/resources, but later add additional ones based on user action or external state change, you can add/update/remove them _after_ the Server is connected. This will automatically emit the corresponding `listChanged` notificaions:
 
 ```ts
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
 
 const server = new McpServer({
-  name: "Dynamic Example",
-  version: "1.0.0"
+  name: 'Dynamic Example',
+  version: '1.0.0',
 });
 
 const listMessageTool = server.tool(
-  "listMessages",
+  'listMessages',
   { channel: z.string() },
   async ({ channel }) => ({
-    content: [{ type: "text", text: await listMessages(channel) }]
-  })
+    content: [{ type: 'text', text: await listMessages(channel) }],
+  }),
 );
 
 const putMessageTool = server.tool(
-  "putMessage",
+  'putMessage',
   { channel: z.string(), message: z.string() },
   async ({ channel, message }) => ({
-    content: [{ type: "text", text: await putMessage(channel, string) }]
-  })
+    content: [{ type: 'text', text: await putMessage(channel, string) }],
+  }),
 );
 // Until we upgrade auth, `putMessage` is disabled (won't show up in listTools)
-putMessageTool.disable()
+putMessageTool.disable();
 
 const upgradeAuthTool = server.tool(
-  "upgradeAuth",
-  { permission: z.enum(["write', vadmin"])},
+  'upgradeAuth',
+  { permission: z.enum(["write', vadmin"]) },
   // Any mutations here will automatically emit `listChanged` notifications
   async ({ permission }) => {
-    const { ok, err, previous } = await upgradeAuthAndStoreToken(permission)
-    if (!ok) return {content: [{ type: "text", text: `Error: ${err}` }]}
+    const { ok, err, previous } = await upgradeAuthAndStoreToken(permission);
+    if (!ok) return { content: [{ type: 'text', text: `Error: ${err}` }] };
 
     // If we previously had read-only access, 'putMessage' is now available
-    if (previous === "read") {
-      putMessageTool.enable()
+    if (previous === 'read') {
+      putMessageTool.enable();
     }
 
     if (permission === 'write') {
-      // If we've just upgraded to 'write' permissions, we can still call 'upgradeAuth' 
-      // but can only upgrade to 'admin'. 
+      // If we've just upgraded to 'write' permissions, we can still call 'upgradeAuth'
+      // but can only upgrade to 'admin'.
       upgradeAuthTool.update({
-        paramSchema: { permission: z.enum(["admin"]) }, // change validation rules
-      })
+        paramSchema: { permission: z.enum(['admin']) }, // change validation rules
+      });
     } else {
       // If we're now an admin, we no longer have anywhere to upgrade to, so fully remove that tool
-      upgradeAuthTool.remove()
+      upgradeAuthTool.remove();
     }
-  }
-)
+  },
+);
 
 // Connect as normal
 const transport = new StdioServerTransport();
@@ -578,52 +571,58 @@ await server.connect(transport);
 For more control, you can use the low-level Server class directly:
 
 ```typescript
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
   ListPromptsRequestSchema,
-  GetPromptRequestSchema
-} from "@modelcontextprotocol/sdk/types.js";
+  GetPromptRequestSchema,
+} from '@modelcontextprotocol/sdk/types.js';
 
 const server = new Server(
   {
-    name: "example-server",
-    version: "1.0.0"
+    name: 'example-server',
+    version: '1.0.0',
   },
   {
     capabilities: {
-      prompts: {}
-    }
-  }
+      prompts: {},
+    },
+  },
 );
 
 server.setRequestHandler(ListPromptsRequestSchema, async () => {
   return {
-    prompts: [{
-      name: "example-prompt",
-      description: "An example prompt template",
-      arguments: [{
-        name: "arg1",
-        description: "Example argument",
-        required: true
-      }]
-    }]
+    prompts: [
+      {
+        name: 'example-prompt',
+        description: 'An example prompt template',
+        arguments: [
+          {
+            name: 'arg1',
+            description: 'Example argument',
+            required: true,
+          },
+        ],
+      },
+    ],
   };
 });
 
-server.setRequestHandler(GetPromptRequestSchema, async (request) => {
-  if (request.params.name !== "example-prompt") {
-    throw new Error("Unknown prompt");
+server.setRequestHandler(GetPromptRequestSchema, async request => {
+  if (request.params.name !== 'example-prompt') {
+    throw new Error('Unknown prompt');
   }
   return {
-    description: "Example prompt",
-    messages: [{
-      role: "user",
-      content: {
-        type: "text",
-        text: "Example prompt text"
-      }
-    }]
+    description: 'Example prompt',
+    messages: [
+      {
+        role: 'user',
+        content: {
+          type: 'text',
+          text: 'Example prompt text',
+        },
+      },
+    ],
   };
 });
 
@@ -636,20 +635,18 @@ await server.connect(transport);
 The SDK provides a high-level client interface:
 
 ```typescript
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
 const transport = new StdioClientTransport({
-  command: "node",
-  args: ["server.js"]
+  command: 'node',
+  args: ['server.js'],
 });
 
-const client = new Client(
-  {
-    name: "example-client",
-    version: "1.0.0"
-  }
-);
+const client = new Client({
+  name: 'example-client',
+  version: '1.0.0',
+});
 
 await client.connect(transport);
 
@@ -658,10 +655,10 @@ const prompts = await client.listPrompts();
 
 // Get a prompt
 const prompt = await client.getPrompt({
-  name: "example-prompt",
+  name: 'example-prompt',
   arguments: {
-    arg1: "value"
-  }
+    arg1: 'value',
+  },
 });
 
 // List resources
@@ -669,15 +666,15 @@ const resources = await client.listResources();
 
 // Read a resource
 const resource = await client.readResource({
-  uri: "file:///example.txt"
+  uri: 'file:///example.txt',
 });
 
 // Call a tool
 const result = await client.callTool({
-  name: "example-tool",
+  name: 'example-tool',
   arguments: {
-    arg1: "value"
-  }
+    arg1: 'value',
+  },
 });
 ```
 
@@ -692,35 +689,38 @@ import { ProxyOAuthServerProvider, mcpAuthRouter } from '@modelcontextprotocol/s
 const app = express();
 
 const proxyProvider = new ProxyOAuthServerProvider({
-    endpoints: {
-        authorizationUrl: "https://auth.external.com/oauth2/v1/authorize",
-        tokenUrl: "https://auth.external.com/oauth2/v1/token",
-        revocationUrl: "https://auth.external.com/oauth2/v1/revoke",
-    },
-    verifyAccessToken: async (token) => {
-        return {
-            token,
-            clientId: "123",
-            scopes: ["openid", "email", "profile"],
-        }
-    },
-    getClient: async (client_id) => {
-        return {
-            client_id,
-            redirect_uris: ["http://localhost:3000/callback"],
-        }
-    }
-})
+  endpoints: {
+    authorizationUrl: 'https://auth.external.com/oauth2/v1/authorize',
+    tokenUrl: 'https://auth.external.com/oauth2/v1/token',
+    revocationUrl: 'https://auth.external.com/oauth2/v1/revoke',
+  },
+  verifyAccessToken: async token => {
+    return {
+      token,
+      clientId: '123',
+      scopes: ['openid', 'email', 'profile'],
+    };
+  },
+  getClient: async client_id => {
+    return {
+      client_id,
+      redirect_uris: ['http://localhost:3000/callback'],
+    };
+  },
+});
 
-app.use(mcpAuthRouter({
+app.use(
+  mcpAuthRouter({
     provider: proxyProvider,
-    issuerUrl: new URL("http://auth.external.com"),
-    baseUrl: new URL("http://mcp.example.com"),
-    serviceDocumentationUrl: new URL("https://docs.example.com/"),
-}))
+    issuerUrl: new URL('http://auth.external.com'),
+    baseUrl: new URL('http://mcp.example.com'),
+    serviceDocumentationUrl: new URL('https://docs.example.com/'),
+  }),
+);
 ```
 
 This setup allows you to:
+
 - Forward OAuth requests to an external provider
 - Add custom token validation logic
 - Manage client registrations
@@ -736,31 +736,29 @@ Clients and servers with StreamableHttp tranport can maintain [backwards compati
 For clients that need to work with both Streamable HTTP and older SSE servers:
 
 ```typescript
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
-let client: Client|undefined = undefined
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
+let client: Client | undefined = undefined;
 const baseUrl = new URL(url);
 try {
   client = new Client({
     name: 'streamable-http-client',
-    version: '1.0.0'
+    version: '1.0.0',
   });
-  const transport = new StreamableHTTPClientTransport(
-    new URL(baseUrl)
-  );
+  const transport = new StreamableHTTPClientTransport(new URL(baseUrl));
   await client.connect(transport);
-  console.log("Connected using Streamable HTTP transport");
+  console.log('Connected using Streamable HTTP transport');
 } catch (error) {
   // If that fails with a 4xx error, try the older SSE transport
-  console.log("Streamable HTTP connection failed, falling back to SSE transport");
+  console.log('Streamable HTTP connection failed, falling back to SSE transport');
   client = new Client({
     name: 'sse-client',
-    version: '1.0.0'
+    version: '1.0.0',
   });
   const sseTransport = new SSEClientTransport(baseUrl);
   await client.connect(sseTransport);
-  console.log("Connected using SSE transport");
+  console.log('Connected using SSE transport');
 }
 ```
 
@@ -769,15 +767,15 @@ try {
 For servers that need to support both Streamable HTTP and older clients:
 
 ```typescript
-import express from "express";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
-import { InMemoryEventStore } from "@modelcontextprotocol/sdk/inMemory.js";
+import express from 'express';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+import { InMemoryEventStore } from '@modelcontextprotocol/sdk/inMemory.js';
 
 const server = new McpServer({
-  name: "backwards-compatible-server",
-  version: "1.0.0"
+  name: 'backwards-compatible-server',
+  version: '1.0.0',
 });
 
 // ... set up server resources, tools, and prompts ...
@@ -788,7 +786,7 @@ app.use(express.json());
 // Store transports for each session type
 const transports = {
   streamable: {} as Record<string, StreamableHTTPServerTransport>,
-  sse: {} as Record<string, SSEServerTransport>
+  sse: {} as Record<string, SSEServerTransport>,
 };
 
 // Modern Streamable HTTP endpoint
@@ -803,11 +801,11 @@ app.get('/sse', async (req, res) => {
   // Create SSE transport for legacy clients
   const transport = new SSEServerTransport('/messages', res);
   transports.sse[transport.sessionId] = transport;
-  
-  res.on("close", () => {
+
+  res.on('close', () => {
     delete transports.sse[transport.sessionId];
   });
-  
+
   await server.connect(transport);
 });
 
