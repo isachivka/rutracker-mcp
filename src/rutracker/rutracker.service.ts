@@ -17,6 +17,7 @@ export class RutrackerService implements OnModuleInit {
   private readonly password: string;
   private isLoggedIn: boolean = false;
   private readonly cookieFilePath: string;
+  private isReloggingIn: boolean = false; // Flag to prevent login recursion
 
   constructor(private configService: ConfigService) {
     this.baseUrl = this.configService.get<string>(
@@ -44,8 +45,10 @@ export class RutrackerService implements OnModuleInit {
    * Initialize the service by loading cookies from file
    */
   async onModuleInit() {
+    console.log('🔄 Initializing RutrackerService, loading cookies from file...');
     await this.loadCookiesFromFile();
     this.updateLoginStatus();
+    console.log(`👤 Initial login status: ${this.isLoggedIn}`);
   }
 
   /**
@@ -108,11 +111,29 @@ export class RutrackerService implements OnModuleInit {
   }
 
   /**
+   * Check if user is logged in by looking for username in HTML
+   * @param html HTML content to check
+   * @returns Whether the user appears to be logged in
+   */
+  private isLoggedInByHtml(html: string): boolean {
+    if (!this.username) return false;
+
+    // Look for the logged-in username element
+    const usernamePattern = new RegExp(
+      `<a id="logged-in-username"[^>]*href="[^"]*profile\\.php\\?mode=viewprofile[^"]*"[^>]*>${this.username}<\\/a>`,
+      'i',
+    );
+
+    return usernamePattern.test(html);
+  }
+
+  /**
    * Generic method to visit any page on RuTracker
    * @param page The page path (relative to baseUrl)
    * @param method HTTP method to use
    * @param data Optional data to send with request (for POST, PUT, etc.)
    * @param allowRedirects Whether to allow automatic redirects
+   * @param checkSession Whether to check if session is valid and relogin if needed
    * @returns Promise with visit result (cookies and page body)
    */
   async visit(
@@ -120,6 +141,7 @@ export class RutrackerService implements OnModuleInit {
     method: Method = 'GET',
     data?: any,
     allowRedirects: boolean = true,
+    checkSession: boolean = true,
   ): Promise<PageVisitResult> {
     const url = this.baseUrl + page;
 
@@ -139,7 +161,7 @@ export class RutrackerService implements OnModuleInit {
         },
         maxRedirects: allowRedirects ? 5 : 0, // Only follow redirects if allowed
         validateStatus: allowRedirects
-          ? status => status < 400 // Only reject if status code is >= 400 when redirects are allowed
+          ? _status => _status < 400 // Only reject if status code is >= 400 when redirects are allowed
           : () => true, // Accept all status codes when disabling redirects
         responseType: 'arraybuffer', // Important for correct encoding handling
       };
@@ -185,6 +207,31 @@ export class RutrackerService implements OnModuleInit {
         }
       }
 
+      // Check if login session is valid by looking for username in HTML
+      // Only for non-login requests and when not already in the process of re-logging in
+      if (checkSession && page !== 'login.php' && !this.isReloggingIn && this.username) {
+        const isLoggedInByHtml = this.isLoggedInByHtml(body);
+        console.log(`Username check in HTML: ${isLoggedInByHtml ? 'FOUND' : 'NOT FOUND'}`);
+
+        if (!isLoggedInByHtml && this.username && this.password) {
+          console.log('Session appears to be expired, attempting to re-login');
+          this.isReloggingIn = true;
+
+          // Try to login again
+          const loginSuccess = await this.login();
+
+          if (loginSuccess) {
+            console.log('Re-login successful, repeating original request');
+            // Repeat the original request now that we're logged in
+            this.isReloggingIn = false;
+            return this.visit(page, method, data, allowRedirects, false); // Don't check session again
+          } else {
+            console.error('Failed to re-login');
+            this.isReloggingIn = false;
+          }
+        }
+      }
+
       return {
         cookies: this.cookies,
         body,
@@ -220,7 +267,8 @@ export class RutrackerService implements OnModuleInit {
       formData.append('login', '\u0432\u0445\u043e\u0434');
 
       // Submit login form WITHOUT allowing redirects to capture cookies
-      await this.visit('login.php', 'POST', formData, false);
+      // Don't check session validity for login request (to avoid recursion)
+      await this.visit('login.php', 'POST', formData, false, false);
 
       // Check if bb_session cookie was set after login attempt
       const bbSessionCookie = this.cookies.find(cookie => cookie.name === 'bb_session');
