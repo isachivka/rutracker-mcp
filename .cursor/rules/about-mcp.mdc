@@ -1,0 +1,7 @@
+---
+description: 
+globs: MCP.md
+alwaysApply: false
+---
+
+# This project implements mcp server, you need to follow the corresponding documentation of MCP TypeScript SDK, MCP.md
