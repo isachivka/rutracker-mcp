@@ -67,3 +67,30 @@ export interface ApiSearchResponse {
   };
   error?: string;
 }
+
+/**
+ * TorrentDetails interface to store torrent topic details
+ */
+export interface TorrentDetails {
+  id: string;
+  title?: string;
+  content: string; // HTML content from the post message
+  magnetLink?: string;
+  downloadLink?: string;
+}
+
+/**
+ * API Torrent Details Response interface for external clients
+ */
+export interface ApiTorrentDetailsResponse {
+  success: boolean;
+  data?: TorrentDetails;
+  error?: string;
+}
+
+/**
+ * TorrentDetailsOptions interface for getting torrent details
+ */
+export interface TorrentDetailsOptions {
+  id: string;
+}

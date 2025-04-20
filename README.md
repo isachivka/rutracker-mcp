@@ -12,6 +12,7 @@ This is a Nest.js based backend implementing the Model Context Protocol (MCP) fo
 - RuTracker web scraping capabilities with cookie management and encoding support
 - Advanced search functionality with multi-page result handling
 - Magnet link extraction for torrents
+- Torrent details extraction with post content
 
 ## Getting Started
 
@@ -60,6 +61,7 @@ The RuTracker module provides functionality to interact with the RuTracker websi
 - Advanced search functionality with pagination
 - Retrieves all search results across multiple pages
 - Extracts magnet links from torrent topic pages
+- Extracts torrent details including forum post content
 
 #### Example Usage
 
@@ -98,6 +100,11 @@ console.log(`Found ${allResults.length} total results across all pages`);
 
 // Get magnet link for a specific torrent
 const magnetLink = await this.rutrackerService.getMagnetLink('12345');
+
+// Get detailed information for a torrent
+const torrentDetails = await this.rutrackerService.getTorrentDetails({ id: '5974649' });
+console.log(`Title: ${torrentDetails.title}`);
+console.log(`Content: ${torrentDetails.content.substring(0, 100)}...`);
 ```
 
 #### Configuration
@@ -156,6 +163,26 @@ To get a magnet link for a specific torrent:
 ```typescript
 const magnetLink = await rutrackerService.getMagnetLink('12345');
 ```
+
+### Torrent Details Extraction
+
+To get detailed information about a specific torrent, including the forum post content:
+
+```typescript
+// Using torrent ID
+const details = await rutrackerService.getTorrentDetails({ id: '5974649' });
+
+// Or using full URL
+const details = await rutrackerService.getTorrentDetails({ id: 'viewtopic.php?t=5974649' });
+```
+
+This returns an object containing:
+
+- Torrent ID
+- Title (page title)
+- Content (HTML of the forum post)
+- Magnet link (if available)
+- Download link
 
 Each search result includes:
 

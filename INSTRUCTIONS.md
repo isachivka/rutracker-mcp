@@ -12,6 +12,7 @@ This application implements the Model Context Protocol (MCP) with a client-serve
 - Added Win-1251 encoding support for Russian content
 - Refactored to remove controller and simplify service API
 - Added search functionality with paginated results and magnet link extraction
+- Added torrent details extraction with post content
 
 ## Project Structure
 
@@ -94,6 +95,7 @@ getLoginStatus(): boolean
 search(options: SearchOptions): Promise<SearchResponse>
 searchAllPages(options: SearchOptions): Promise<TorrentSearchResult[]>
 getMagnetLink(topicId: string): Promise<string>
+getTorrentDetails(options: TorrentDetailsOptions): Promise<TorrentDetails>
 ```
 
 #### Cookie Utilities
@@ -148,6 +150,20 @@ interface TorrentSearchResult {
   downloadLink: string;
   topicLink: string;
 }
+
+// Torrent details options
+interface TorrentDetailsOptions {
+  id: string; // Can be either numeric ID or full URL
+}
+
+// Torrent details response
+interface TorrentDetails {
+  id: string;
+  title?: string;
+  content: string; // HTML content from the post message
+  magnetLink?: string;
+  downloadLink?: string;
+}
 ```
 
 ### Search Implementation Details
@@ -160,6 +176,18 @@ The search implementation uses regular expressions to parse the HTML content of 
 4. The `getMagnetLink()` method parses topic pages to extract magnet links
 
 For pagination, the service uses concurrent requests to fetch all pages simultaneously, improving performance for large result sets.
+
+### Torrent Details Extraction
+
+The module can extract detailed information about a specific torrent, including the HTML content of the first post that typically contains the description:
+
+1. The `getTorrentDetails()` method retrieves the content of a torrent topic page
+2. It extracts the title from the page header
+3. It uses multiple matching strategies to find the post content in the HTML structure
+4. It attempts to get the magnet link for the torrent
+5. It returns a structured `TorrentDetails` object with all available information
+
+The implementation uses a resilient approach with multiple fallback patterns for extracting content, handling different HTML structures that may be encountered on RuTracker.
 
 ### Ethical Web Scraping Guidelines
 
@@ -202,18 +230,35 @@ console.log(`Found ${allResults.length} total results across all pages`);
 // Get magnet link for a specific torrent
 const magnetLink = await this.rutrackerService.getMagnetLink('12345');
 console.log(`Magnet link: ${magnetLink}`);
+
+// Get detailed information for a torrent
+const details = await this.rutrackerService.getTorrentDetails({ id: '5974649' });
+console.log(`Title: ${details.title}`);
+console.log(`Content length: ${details.content.length} characters`);
+console.log(`Download link: ${details.downloadLink}`);
+
+// Access using full URL
+const detailsByUrl = await this.rutrackerService.getTorrentDetails({
+  id: 'viewtopic.php?t=5974649'
+});
 ```
 
 ### Testing
 
-The module includes comprehensive tests for the search functionality:
+The module includes comprehensive tests for all functionality:
 
 1. **Unit tests**: Validate the behavior of individual components
-2. **Integration tests**: Test the full search workflow with the actual RuTracker website
+2. **Integration tests**: Test the full workflow with the actual RuTracker website
 3. **Mock tests**: Test edge cases and error handling without external dependencies
 
 Run the search-specific tests with:
 
 ```bash
 npm run test -- --testNamePattern="search"
+```
+
+Run the torrent details tests with:
+
+```bash
+npm run test -- --testNamePattern="getTorrentDetails"
 ```

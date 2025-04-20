@@ -167,4 +167,62 @@ describe('RutrackerService', () => {
       }
     }, 120000); // 2 minutes timeout for multi-page search
   });
+
+  describe('getTorrentDetails', () => {
+    it('should retrieve torrent details by ID', async () => {
+      // Ensure we're logged in
+      if (!service.getLoginStatus()) {
+        await service.login();
+      }
+
+      // Test with a known torrent ID from rutracker
+      // Using a popular Linux distribution that should exist for a long time
+      const topicId = '5974649'; // Example ID
+      console.log(`Getting details for torrent ID: ${topicId}`);
+
+      const details = await service.getTorrentDetails({ id: topicId });
+
+      console.log(`Title: ${details.title}`);
+      console.log(`Content length: ${details.content.length} characters`);
+      if (details.magnetLink) {
+        console.log(`Magnet link: ${details.magnetLink.substring(0, 60)}...`);
+      }
+      console.log(`Download link: ${details.downloadLink}`);
+
+      // Check structure of results
+      expect(details).toHaveProperty('id');
+      expect(details).toHaveProperty('title');
+      expect(details).toHaveProperty('content');
+      expect(details).toHaveProperty('downloadLink');
+
+      // Content should be non-empty
+      expect(details.content.length).toBeGreaterThan(0);
+
+      // Check that the ID matches
+      expect(details.id).toBe(topicId);
+
+      // Download link should contain the ID
+      expect(details.downloadLink).toContain(topicId);
+    }, 30000); // 30 seconds timeout
+
+    it('should accept a full URL with topic ID', async () => {
+      // Ensure we're logged in
+      if (!service.getLoginStatus()) {
+        await service.login();
+      }
+
+      // Test with a known torrent URL
+      const topicId = '5974649';
+      const topicUrl = `viewtopic.php?t=${topicId}`;
+      console.log(`Getting details for torrent URL: ${topicUrl}`);
+
+      const details = await service.getTorrentDetails({ id: topicUrl });
+
+      // Check that the ID was properly extracted
+      expect(details.id).toBe(topicId);
+
+      // Content should be non-empty
+      expect(details.content.length).toBeGreaterThan(0);
+    }, 30000); // 30 seconds timeout
+  });
 });
