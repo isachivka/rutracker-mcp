@@ -13,6 +13,117 @@ This application implements the Model Context Protocol (MCP) with a client-serve
 - Refactored to remove controller and simplify service API
 - Added search functionality with paginated results and magnet link extraction
 - Added torrent details extraction with post content
+- Implemented Model Context Protocol (MCP) server with RuTracker tools
+
+## MCP Implementation
+
+The application integrates the Model Context Protocol (MCP) to enable seamless interaction between AI models and the RuTracker functionality. This implementation follows the standard MCP specification.
+
+### MCP Module Structure
+
+```
+src/
+├── mcp/
+│   ├── mcp.module.ts        # MCP module configuration
+│   └── rutracker.tool.ts    # RuTracker MCP tools implementation
+```
+
+### MCP Server Configuration
+
+The MCP server is configured in `mcp.module.ts` using the `@rekog/mcp-nest` package:
+
+```typescript
+@Module({
+  imports: [
+    McpModule.forRoot({
+      name: 'rutracker-mcp-server',
+      version: '1.0.0',
+    }),
+    RutrackerModule,
+  ],
+  providers: [RutrackerTool],
+  exports: [McpModule],
+})
+export class McpServerModule {}
+```
+
+### MCP Endpoints
+
+The application exposes the standard MCP endpoints:
+
+- `GET /sse`: Server-Sent Events (SSE) connection endpoint
+- `POST /messages`: Tool execution endpoint
+
+### Available MCP Tools
+
+The application implements the following MCP tools:
+
+#### rutracker-search
+
+Allows searching for torrents on RuTracker with the following parameters:
+
+- `query`: Search query (string)
+- `limit`: Maximum number of results (number, optional, default: 1000)
+
+#### rutracker-get-magnet
+
+Retrieves a magnet link for a specific torrent:
+
+- `torrentId`: Torrent ID (string)
+
+#### rutracker-get-details
+
+Gets detailed information about a specific torrent:
+
+- `torrentId`: Torrent ID (string)
+
+### Tool Implementation
+
+Tools are implemented using the `@Tool` decorator from the MCP NestJS package, with parameter validation using Zod schemas. Each tool calls the corresponding method from the RutrackerService.
+
+Example tool implementation:
+
+```typescript
+@Tool({
+  name: 'rutracker-search',
+  description: 'Search for torrents on rutracker.org',
+  parameters: z.object({
+    query: z.string().describe('Search query'),
+    limit: z.number().optional().default(1000).describe('Maximum number of results to return'),
+  }),
+})
+async search({ query, limit }) {
+  // Implementation details
+}
+```
+
+### MCP Integration in Main Application
+
+The MCP server module is integrated into the main application in `app.module.ts`:
+
+```typescript
+@Module({
+  imports: [ConfigModule.forRoot(), RutrackerModule, McpServerModule],
+  controllers: [],
+  providers: [],
+})
+export class AppModule {}
+```
+
+The main.ts file configures the application to handle MCP endpoints properly:
+
+```typescript
+// Set global prefix for API routes except MCP endpoints
+app.setGlobalPrefix('/api', { exclude: ['sse', 'messages'] });
+
+// Enable CORS for MCP client access
+app.enableCors({
+  origin: '*',
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
+});
+```
 
 ## Project Structure
 
