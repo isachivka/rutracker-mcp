@@ -21,14 +21,18 @@
     "prepare": "husky install"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.10.1",
     "@nestjs/common": "^10.0.0",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^10.0.0",
     "@nestjs/platform-express": "^10.0.0",
+    "@rekog/mcp-nest": "^1.5.0-beta.1",
     "axios": "^1.8.4",
     "iconv-lite": "^0.6.3",
     "reflect-metadata": "^0.2.0",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "turndown": "^7.2.0",
+    "zod": "^3.24.3"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",

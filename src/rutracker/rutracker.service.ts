@@ -15,6 +15,7 @@ import { ConfigService } from '@nestjs/config';
 import { CONFIG } from '../config';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as TurndownService from 'turndown';
 
 @Injectable()
 export class RutrackerService implements OnModuleInit {
@@ -36,8 +37,13 @@ export class RutrackerService implements OnModuleInit {
   private readonly SEARCH_PATTERN = '%stracker.php?nm=%s';
   private readonly PAGE_PATTERN = '%s&start=%s';
   private readonly RESULTS_PER_PAGE = 50;
+  private readonly turndownService: {
+    turndown: (content: string) => string;
+  };
 
   constructor(private configService: ConfigService) {
+    this.turndownService = new TurndownService();
+
     this.baseUrl = this.configService.get<string>(
       CONFIG.RUTRACKER.BASE_URL,
       'https://rutracker.org/forum/',
@@ -504,67 +510,7 @@ export class RutrackerService implements OnModuleInit {
       const titleMatch = titleRegex.exec(response.body);
       const title = titleMatch ? this.decodeHtmlEntities(titleMatch[1]) : undefined;
 
-      // Extract content from the page based on the provided HTML structure
-      // Looking for content inside a <tbody id="post_...">, inside a <td class="message"> element
-      // This is a more flexible regex that should work with the HTML structure shown in the screenshot
-      const contentRegex =
-        /<tbody\s+id="post_\d+"[^>]*>[\s\S]*?<td\s+class="message[^"]*"[^>]*>([\s\S]*?)<\/td>/i;
-      const contentMatch = contentRegex.exec(response.body);
-
-      if (!contentMatch || !contentMatch[1]) {
-        // If the first regex doesn't match, try an alternative approach using class="post_wrap"
-        const altContentRegex =
-          /<div\s+class="post_wrap"[^>]*>[\s\S]*?<div\s+class="post_body"[^>]*>([\s\S]*?)<\/div>/i;
-        const altContentMatch = altContentRegex.exec(response.body);
-
-        if (!altContentMatch || !altContentMatch[1]) {
-          // If second attempt fails too, try one more approach based on the screenshot
-          const lastResortRegex =
-            /<div\s+class="post_wrap"[^>]*>[\s\S]*?<\/div>\s*<\/div>\s*<\/td>/i;
-          const lastResortMatch = lastResortRegex.exec(response.body);
-
-          if (!lastResortMatch) {
-            // For debugging, let's log a portion of the HTML to see the actual structure
-            console.error('HTML structure not matching expected patterns. HTML snippet:');
-            console.error(response.body.substring(0, 500) + '...');
-            console.error('...' + response.body.substring(response.body.length - 500));
-
-            throw new Error('Torrent description content not found on the page');
-          }
-
-          // Just use a portion of the page if nothing else works
-          const content = response.body.substring(
-            response.body.indexOf('<table id="topic_main"'),
-            response.body.indexOf('</table>', response.body.indexOf('<table id="topic_main"')),
-          );
-
-          // Try to get magnet link
-          let magnetLink;
-          try {
-            magnetLink = await this.getMagnetLink(topicId);
-          } catch (e) {
-            console.warn(`Could not get magnet link for topic ${topicId}: ${e.message}`);
-          }
-
-          return {
-            id: topicId,
-            title,
-            content: content || 'Content extraction failed, returning raw HTML',
-            magnetLink,
-            downloadLink: `${this.baseUrl}dl.php?t=${topicId}`,
-          };
-        }
-
-        return {
-          id: topicId,
-          title,
-          content: altContentMatch[1],
-          magnetLink: await this.getMagnetLink(topicId).catch(() => undefined),
-          downloadLink: `${this.baseUrl}dl.php?t=${topicId}`,
-        };
-      }
-
-      const content = contentMatch[1];
+      const content = this.turndownService.turndown(this.processContent(response.body));
 
       // Try to get magnet link
       let magnetLink;
@@ -585,5 +531,37 @@ export class RutrackerService implements OnModuleInit {
       console.error(`Error getting torrent details for ID ${options.id}:`, error.message);
       throw error;
     }
+  }
+
+  /**
+   * Process HTML content by removing everything before <div class="post_wrap" and after <!--/post_body--> and newlines/tabs
+   * @param content HTML content to process
+   * @returns Processed HTML content
+   */
+  private processContent(content: string): string {
+    // Find the start and end markers
+    const startIndex = content.indexOf('<div class="post_body"');
+
+    let processedContent = content;
+
+    // Cut from start if marker found
+    if (startIndex > -1) {
+      processedContent = processedContent.substring(startIndex);
+    }
+
+    const endMarker = '<!--/post_body-->';
+    const endIndex = processedContent.indexOf(endMarker);
+
+    // Cut to end if marker found, including the end marker itself
+    if (endIndex > -1) {
+      // Adding the length of the end marker to completely remove it
+      processedContent = processedContent.substring(0, endIndex);
+      console.log(`End marker found at ${endIndex}. Content trimmed.`);
+    } else {
+      console.log('End marker <!--/post_body--> not found in the content');
+    }
+
+    // Remove newlines and tabs
+    return processedContent.replace(/[\n\t]/g, '');
   }
 }
