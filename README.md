@@ -46,7 +46,6 @@ Search for torrents on Rutracker.org.
 Parameters:
 
 - `query`: Search query
-- `limit`: (Optional) Maximum number of results to return (default: 1000)
 
 ### rutracker-get-magnet
 

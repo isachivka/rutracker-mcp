@@ -63,7 +63,6 @@ The application implements the following MCP tools:
 Allows searching for torrents on RuTracker with the following parameters:
 
 - `query`: Search query (string)
-- `limit`: Maximum number of results (number, optional, default: 1000)
 
 #### rutracker-get-magnet
 
@@ -89,10 +88,9 @@ Example tool implementation:
   description: 'Search for torrents on rutracker.org',
   parameters: z.object({
     query: z.string().describe('Search query'),
-    limit: z.number().optional().default(1000).describe('Maximum number of results to return'),
   }),
 })
-async search({ query, limit }) {
+async search({ query }) {
   // Implementation details
 }
 ```

@@ -12,10 +12,9 @@ export class RutrackerTool {
     description: 'Search for torrents on rutracker.org',
     parameters: z.object({
       query: z.string().describe('Search query'),
-      limit: z.number().optional().default(1000).describe('Maximum number of results to return'),
     }),
   })
-  async search({ query, limit }) {
+  async search({ query }) {
     try {
       // Check login status
       if (!this.rutrackerService.getLoginStatus()) {
@@ -25,16 +24,17 @@ export class RutrackerTool {
       // Perform search
       const searchResults = await this.rutrackerService.searchAllPages({ query });
 
-      // Format results and limit them
-      const limitedResults = searchResults.slice(0, limit);
-      const formattedResults = limitedResults.map(result => ({
-        id: result.id,
-        name: result.name,
-        size: result.size,
-        seeders: result.seeders,
-        leechers: result.leechers,
-        pubDate: result.pubDate,
-      }));
+      // Format results
+      const formattedResults = searchResults
+        .sort((a, b) => b.seeders - a.seeders) // Sort by seeders in descending order
+        .map(result => ({
+          id: result.id,
+          name: result.name,
+          size: result.size,
+          seeders: result.seeders,
+          leechers: result.leechers,
+          pubDate: result.pubDate,
+        }));
 
       return {
         content: [

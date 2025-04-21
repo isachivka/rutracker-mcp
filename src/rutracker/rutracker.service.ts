@@ -241,6 +241,9 @@ export class RutrackerService implements OnModuleInit {
           console.log('Session appears to be expired, attempting to re-login');
           this.isReloggingIn = true;
 
+          // Clear all cookies before re-login attempt
+          await this.clearCookies();
+
           // Try to login again
           const loginSuccess = await this.login();
 
@@ -563,5 +566,23 @@ export class RutrackerService implements OnModuleInit {
 
     // Remove newlines and tabs
     return processedContent.replace(/[\n\t]/g, '');
+  }
+
+  /**
+   * Clear all cookies in memory and in the cookie file
+   */
+  private async clearCookies(): Promise<void> {
+    console.log('Clearing all cookies from memory and file');
+    this.cookies = [];
+    this.rawCookies = [];
+    this.isLoggedIn = false;
+
+    try {
+      // Clear the cookie file by writing an empty array
+      await fs.promises.writeFile(this.cookieFilePath, JSON.stringify([]), 'utf8');
+      console.log('Cookie file cleared');
+    } catch (error) {
+      console.error(`Error clearing cookie file: ${error.message}`);
+    }
   }
 }
