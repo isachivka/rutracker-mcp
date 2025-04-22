@@ -172,6 +172,7 @@ export class RutrackerService implements OnModuleInit {
    * @param data Optional data to send with request (for POST, PUT, etc.)
    * @param allowRedirects Whether to allow automatic redirects
    * @param checkSession Whether to check if session is valid and relogin if needed
+   * @param isBinary Whether to treat response as binary data without decoding
    * @returns Promise with visit result (cookies and page body)
    */
   async visit(
@@ -180,6 +181,7 @@ export class RutrackerService implements OnModuleInit {
     data?: any,
     allowRedirects: boolean = true,
     checkSession: boolean = true,
+    isBinary: boolean = false,
   ): Promise<PageVisitResult> {
     const url = this.baseUrl + page;
 
@@ -231,23 +233,39 @@ export class RutrackerService implements OnModuleInit {
         this.updateLoginStatus();
       }
 
-      // Convert body from Windows-1251 to UTF-8
-      const contentType = response.headers['content-type'] || '';
-      let body = '';
+      // Process response body
+      let body;
 
-      if (response.data) {
-        // Check if content-type header indicates Windows-1251 encoding
-        if (contentType.includes('windows-1251') || contentType.includes('charset=windows-1251')) {
-          body = iconv.decode(Buffer.from(response.data), 'win1251');
-        } else {
-          // Auto-detect encoding or use win1251 by default for RuTracker
-          body = iconv.decode(Buffer.from(response.data), 'win1251');
+      if (isBinary) {
+        // For binary data, don't attempt to decode and just return the raw buffer
+        body = Buffer.from(response.data);
+      } else {
+        // Convert body from Windows-1251 to UTF-8 for text data
+        const contentType = response.headers['content-type'] || '';
+
+        if (response.data) {
+          // Check if content-type header indicates Windows-1251 encoding
+          if (
+            contentType.includes('windows-1251') ||
+            contentType.includes('charset=windows-1251')
+          ) {
+            body = iconv.decode(Buffer.from(response.data), 'win1251');
+          } else {
+            // Auto-detect encoding or use win1251 by default for RuTracker
+            body = iconv.decode(Buffer.from(response.data), 'win1251');
+          }
         }
       }
 
       // Check if login session is valid by looking for username in HTML
       // Only for non-login requests and when not already in the process of re-logging in
-      if (checkSession && page !== 'login.php' && !this.isReloggingIn && this.username) {
+      if (
+        !isBinary &&
+        checkSession &&
+        page !== 'login.php' &&
+        !this.isReloggingIn &&
+        this.username
+      ) {
         const isLoggedInByHtml = this.isLoggedInByHtml(body);
         console.log(`Username check in HTML: ${isLoggedInByHtml ? 'FOUND' : 'NOT FOUND'}`);
 
@@ -265,7 +283,7 @@ export class RutrackerService implements OnModuleInit {
             console.log('Re-login successful, repeating original request');
             // Repeat the original request now that we're logged in
             this.isReloggingIn = false;
-            return this.visit(page, method, data, allowRedirects, false); // Don't check session again
+            return this.visit(page, method, data, allowRedirects, false, isBinary); // Don't check session again
           } else {
             console.error('Failed to re-login');
             this.isReloggingIn = false;
@@ -628,13 +646,13 @@ export class RutrackerService implements OnModuleInit {
 
       console.log(`Sending request to download URL: ${this.baseUrl}${downloadUrl}`);
 
-      // Download the torrent file with binary response type
-      const response = await this.visit(downloadUrl, 'GET', undefined, true, true);
+      // Download the torrent file with binary response type - set isBinary flag to true
+      const response = await this.visit(downloadUrl, 'GET', undefined, true, true, true);
 
-      // Make sure the response is a torrent file (check Content-Type or check if it's binary)
-      // Typically, torrent files start with 'd8:announce'
+      // Make sure the response is a torrent file
+      // For binary data, check if it's a Buffer and has a reasonable size
       const isTorrentFile =
-        response.body && response.body.startsWith('d') && response.body.length > 100; // Simple heuristic check
+        Buffer.isBuffer(response.body) && response.body.length > 100 && response.body[0] === 100; // 'd' in ASCII is 100
 
       if (!isTorrentFile) {
         console.error('Response does not appear to be a valid torrent file');
@@ -647,8 +665,8 @@ export class RutrackerService implements OnModuleInit {
 
       console.log(`Writing torrent file to: ${filePath}`);
 
-      // Write the torrent file
-      await fs.promises.writeFile(filePath, response.body, 'binary');
+      // Write the torrent file as raw binary data
+      await fs.promises.writeFile(filePath, response.body);
 
       console.log(`Successfully downloaded torrent file: ${filename}`);
 
