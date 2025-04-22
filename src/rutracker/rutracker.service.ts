@@ -660,8 +660,6 @@ export class RutrackerService implements OnModuleInit {
         throw new Error('Failed to download valid torrent file');
       }
 
-      console.log(response.body.toString());
-
       // Generate filename
       const filename = `${topicId}.torrent`;
       const filePath = path.join(this.torrentFilesFolder, filename);
