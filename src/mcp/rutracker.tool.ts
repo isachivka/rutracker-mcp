@@ -11,7 +11,7 @@ export class RutrackerTool {
     name: 'rutracker-search',
     description: 'Search for torrents on rutracker.org',
     parameters: z.object({
-      query: z.string().describe('Search query, movie name, or TV show name'),
+      query: z.string().describe('Search query, movie name, or TV show name in en or ru, year'),
     }),
   })
   async search({ query }) {
