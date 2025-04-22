@@ -1,6 +1,0 @@
----
-description: 
-globs: 
-alwaysApply: true
----
-EXAMPLE.py contains the working code of a plugin for something that allows you to search / download files (via magnet-links) in rutracker, we will use it as a source of knowledge about how rutracker works
