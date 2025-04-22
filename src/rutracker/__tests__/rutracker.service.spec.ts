@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { RutrackerService } from '../rutracker.service';
 import { Cookie } from '../interfaces/rutracker.interface';
 import { ConfigModule } from '@nestjs/config';
+import * as fs from 'fs';
 
 describe('RutrackerService', () => {
   let service: RutrackerService;
@@ -223,6 +224,45 @@ describe('RutrackerService', () => {
 
       // Content should be non-empty
       expect(details.content.length).toBeGreaterThan(0);
+    }, 30000); // 30 seconds timeout
+  });
+
+  describe('downloadTorrentFile', () => {
+    it('should download a torrent file by ID', async () => {
+      // Ensure we're logged in
+      if (!service.getLoginStatus()) {
+        await service.login();
+      }
+
+      // Test with a known torrent ID from rutracker
+      // Using a popular Linux distribution that should exist for a long time
+      const topicId = '5974649'; // Example ID
+      console.log(`Downloading torrent file for ID: ${topicId}`);
+
+      const filePath = await service.downloadTorrentFile(topicId);
+
+      console.log(`Downloaded torrent file path: ${filePath}`);
+
+      // Check that the file path is returned
+      expect(filePath).toBeDefined();
+      expect(typeof filePath).toBe('string');
+      expect(filePath.length).toBeGreaterThan(0);
+
+      // Check that the file path contains the ID and .torrent extension
+      expect(filePath).toContain(topicId);
+      expect(filePath).toContain('.torrent');
+
+      // Check if the file exists
+      const fileExists = fs.existsSync(filePath);
+      expect(fileExists).toBe(true);
+
+      // Check file size to ensure it's not empty
+      const stats = fs.statSync(filePath);
+      console.log(`Torrent file size: ${stats.size} bytes`);
+      expect(stats.size).toBeGreaterThan(0);
+
+      // Optional: cleanup the file after test
+      fs.unlinkSync(filePath);
     }, 30000); // 30 seconds timeout
   });
 });

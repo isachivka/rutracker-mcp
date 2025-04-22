@@ -76,6 +76,12 @@ Gets detailed information about a specific torrent:
 
 - `torrentId`: Torrent ID (string)
 
+#### rutracker-download-torrent
+
+Downloads a .torrent file for a specific torrent:
+
+- `torrentId`: Torrent ID (string)
+
 ### Tool Implementation
 
 Tools are implemented using the `@Tool` decorator from the MCP NestJS package, with parameter validation using Zod schemas. Each tool calls the corresponding method from the RutrackerService.
@@ -205,6 +211,7 @@ search(options: SearchOptions): Promise<SearchResponse>
 searchAllPages(options: SearchOptions): Promise<TorrentSearchResult[]>
 getMagnetLink(topicId: string): Promise<string>
 getTorrentDetails(options: TorrentDetailsOptions): Promise<TorrentDetails>
+downloadTorrentFile(topicId: string): Promise<string>
 ```
 
 #### Cookie Utilities
@@ -316,6 +323,20 @@ The search functionality includes additional error handling for:
 - Encoding detection and conversion
 - Proper character escaping in search queries
 
+### Environment Variables
+
+The module relies on the following environment variables:
+
+```
+RUTRACKER_USERNAME=your_username
+RUTRACKER_PASSWORD=your_password
+RUTRACKER_COOKIE_FILE=rutracker.cookie
+RUTRACKER_BASE_URL=https://rutracker.org/forum/
+TORRENT_FILES_FOLDER=./torrents
+```
+
+Each variable has a default value if not specified in the environment.
+
 ### Usage Examples
 
 ```typescript
@@ -345,6 +366,10 @@ const details = await this.rutrackerService.getTorrentDetails({ id: '5974649' })
 console.log(`Title: ${details.title}`);
 console.log(`Content length: ${details.content.length} characters`);
 console.log(`Download link: ${details.downloadLink}`);
+
+// Download a torrent file
+const torrentFilePath = await this.rutrackerService.downloadTorrentFile('5974649');
+console.log(`Torrent file saved to: ${torrentFilePath}`);
 
 // Access using full URL
 const detailsByUrl = await this.rutrackerService.getTorrentDetails({

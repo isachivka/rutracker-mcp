@@ -63,6 +63,14 @@ Parameters:
 
 - `torrentId`: Torrent ID
 
+### rutracker-download-torrent
+
+Download a .torrent file for a specific torrent.
+
+Parameters:
+
+- `torrentId`: Torrent ID
+
 ## Using with AI
 
 This server implements the Model Context Protocol (MCP), making it compatible with AI systems that support MCP. You can connect any MCP-compatible AI client to this server to search for torrents and get magnet links via natural language.
@@ -75,6 +83,7 @@ The server requires the following environment variables:
 - `RUTRACKER_PASSWORD`: Your Rutracker password
 - `RUTRACKER_BASE_URL`: (Optional) Base URL for Rutracker (default: https://rutracker.org/forum/)
 - `RUTRACKER_COOKIE_FILE`: (Optional) Path to cookie file (default: rutracker.cookie)
+- `TORRENT_FILES_FOLDER`: (Optional) Path to directory for storing downloaded torrent files (default: ./torrents)
 
 ## Documentation
 

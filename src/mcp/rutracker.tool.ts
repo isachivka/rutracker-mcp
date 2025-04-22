@@ -138,4 +138,41 @@ export class RutrackerTool {
       };
     }
   }
+
+  @Tool({
+    name: 'rutracker-download-torrent',
+    description: 'Download a .torrent file for a specific torrent ID',
+    parameters: z.object({
+      torrentId: z.string().describe('Torrent ID'),
+    }),
+  })
+  async downloadTorrent({ torrentId }) {
+    try {
+      // Check login status
+      if (!this.rutrackerService.getLoginStatus()) {
+        await this.rutrackerService.login();
+      }
+
+      // Download torrent file
+      const filePath = await this.rutrackerService.downloadTorrentFile(torrentId);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Torrent file successfully downloaded to: ${filePath}`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error downloading torrent file for ID ${torrentId}: ${error.message}`,
+          },
+        ],
+      };
+    }
+  }
 }

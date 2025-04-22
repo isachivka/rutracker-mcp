@@ -27,6 +27,7 @@ export class RutrackerService implements OnModuleInit {
   private isLoggedIn: boolean = false;
   private readonly cookieFilePath: string;
   private isReloggingIn: boolean = false; // Flag to prevent login recursion
+  private readonly torrentFilesFolder: string;
 
   // RegExp patterns for searching
   private readonly RE_TORRENTS = new RegExp(
@@ -63,6 +64,19 @@ export class RutrackerService implements OnModuleInit {
       : path.resolve(process.cwd(), cookieFile);
 
     console.log(`Cookie file path: ${this.cookieFilePath}`);
+
+    // Get torrent files folder from config or use default
+    const torrentFolder = this.configService.get<string>(
+      CONFIG.RUTRACKER.TORRENT_FILES_FOLDER,
+      './torrents',
+    );
+
+    // Resolve the absolute path for the torrent files folder
+    this.torrentFilesFolder = path.isAbsolute(torrentFolder)
+      ? torrentFolder
+      : path.resolve(process.cwd(), torrentFolder);
+
+    console.log(`Torrent files folder: ${this.torrentFilesFolder}`);
   }
 
   /**
@@ -583,6 +597,65 @@ export class RutrackerService implements OnModuleInit {
       console.log('Cookie file cleared');
     } catch (error) {
       console.error(`Error clearing cookie file: ${error.message}`);
+    }
+  }
+
+  /**
+   * Download .torrent file for a specific torrent
+   * @param topicId Topic ID of the torrent
+   * @returns Promise with path to the downloaded torrent file
+   */
+  async downloadTorrentFile(topicId: string): Promise<string> {
+    console.log(`Downloading torrent file for topic ID: ${topicId}`);
+
+    try {
+      // Ensure we are logged in
+      if (!this.isLoggedIn) {
+        console.log('Not logged in, attempting to login before downloading torrent file');
+        const loginSuccess = await this.login();
+        if (!loginSuccess) {
+          throw new Error('Failed to login to RuTracker, cannot download torrent file');
+        }
+      }
+
+      // Create torrents directory if it doesn't exist
+      if (!fs.existsSync(this.torrentFilesFolder)) {
+        console.log(`Creating torrent files directory: ${this.torrentFilesFolder}`);
+        await fs.promises.mkdir(this.torrentFilesFolder, { recursive: true });
+      }
+
+      const downloadUrl = `dl.php?t=${topicId}`;
+
+      console.log(`Sending request to download URL: ${this.baseUrl}${downloadUrl}`);
+
+      // Download the torrent file with binary response type
+      const response = await this.visit(downloadUrl, 'GET', undefined, true, true);
+
+      // Make sure the response is a torrent file (check Content-Type or check if it's binary)
+      // Typically, torrent files start with 'd8:announce'
+      const isTorrentFile =
+        response.body && response.body.startsWith('d') && response.body.length > 100; // Simple heuristic check
+
+      if (!isTorrentFile) {
+        console.error('Response does not appear to be a valid torrent file');
+        throw new Error('Failed to download valid torrent file');
+      }
+
+      // Generate filename
+      const filename = `${topicId}.torrent`;
+      const filePath = path.join(this.torrentFilesFolder, filename);
+
+      console.log(`Writing torrent file to: ${filePath}`);
+
+      // Write the torrent file
+      await fs.promises.writeFile(filePath, response.body, 'binary');
+
+      console.log(`Successfully downloaded torrent file: ${filename}`);
+
+      return filePath;
+    } catch (error) {
+      console.error(`Error downloading torrent file for topic ${topicId}:`, error.message);
+      throw new Error(`Failed to download torrent file: ${error.message}`);
     }
   }
 }
