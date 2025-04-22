@@ -396,3 +396,90 @@ Run the torrent details tests with:
 ```bash
 npm run test -- --testNamePattern="getTorrentDetails"
 ```
+
+## CI/CD Pipeline
+
+The project uses GitHub Actions for continuous integration and continuous deployment.
+
+### Pipeline Configuration
+
+The pipeline is defined in `.github/workflows/ci-cd.yml` and consists of two main jobs:
+
+1. **Build Job**: Runs on every push to main and pull requests
+
+   - Checks out the repository
+   - Sets up Node.js environment
+   - Installs dependencies using `npm ci`
+   - Runs linting checks
+   - Builds the project
+   - Runs unit tests
+
+2. **Deploy Job**: Runs only on pushes to the main branch
+   - Depends on successful completion of the build job
+   - Connects to the production server via SSH using secrets
+   - Pulls the latest code
+   - Installs dependencies and builds the project
+   - Restarts the application using PM2
+
+### Docker Deployment
+
+For Docker-based deployment, the project includes:
+
+1. **Dockerfile**: Multi-stage build process
+
+   - Build stage for compiling TypeScript to JavaScript
+   - Production stage with minimal dependencies
+   - Configuration for proper file handling and permissions
+
+2. **docker-compose.yml**: Simplifies deployment
+   - Defines service configuration
+   - Sets up volume mapping for persistent data
+   - Configures network settings
+   - Handles environment variables
+
+### Required Secrets
+
+The following secrets must be configured in GitHub repository settings:
+
+- `SSH_HOST`: Hostname or IP address of the deployment server
+- `SSH_PORT`: SSH port (usually 22)
+- `SSH_LOGIN`: SSH username for deployment
+- `SSH_KEY`: SSH private key for authentication
+- `DEPLOY_PATH`: Absolute path to the project directory on the server
+
+### Manual Deployment
+
+For manual deployment using Docker:
+
+```bash
+# Build and start containers
+docker-compose up -d --build
+
+# View logs
+docker-compose logs -f
+
+# Update after code changes
+git pull
+docker-compose up -d --build
+
+# Stop services
+docker-compose down
+```
+
+### CI/CD Best Practices
+
+1. **Write good tests**: Ensure comprehensive test coverage
+2. **Make atomic commits**: Each commit should represent a single logical change
+3. **Use descriptive commit messages**: Explain what and why changes were made
+4. **Create pull requests**: Use PRs for code review before merging
+5. **Monitor deployments**: Check logs after deployment to verify success
+
+### Troubleshooting Deployment Issues
+
+If deployment fails, check:
+
+1. GitHub Actions logs for specific error messages
+2. SSH connectivity and permissions
+3. Server disk space and resource utilization
+4. Application logs on the server
+5. Docker logs if using container-based deployment

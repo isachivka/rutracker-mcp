@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  rutracker-mcp:
+    build: .
+    container_name: rutracker-mcp
+    restart: always
+    ports:
+      - '3010:3000'
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - ./torrents:/app/torrents
+      - ./rutracker.cookie:/app/rutracker.cookie
