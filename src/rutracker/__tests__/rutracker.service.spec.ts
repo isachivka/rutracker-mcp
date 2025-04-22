@@ -236,7 +236,7 @@ describe('RutrackerService', () => {
 
       // Test with a known torrent ID from rutracker
       // Using a popular Linux distribution that should exist for a long time
-      const topicId = '5974649'; // Example ID
+      const topicId = '6678230'; // Example ID
       console.log(`Downloading torrent file for ID: ${topicId}`);
 
       const filePath = await service.downloadTorrentFile(topicId);
@@ -262,7 +262,7 @@ describe('RutrackerService', () => {
       expect(stats.size).toBeGreaterThan(0);
 
       // Optional: cleanup the file after test
-      fs.unlinkSync(filePath);
+      // fs.unlinkSync(filePath);
     }, 30000); // 30 seconds timeout
   });
 });
