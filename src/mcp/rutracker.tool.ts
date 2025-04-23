@@ -11,29 +11,22 @@ export class RutrackerTool {
     name: 'rutracker-search',
     description: 'Search for torrents on rutracker.org',
     parameters: z.object({
-      query: z.string().describe(`
-        Search query, e.g.: "Матрица 1999", "Одни из нас Сезон: 2", "The Last of Us Сезон: 2"
-        Это русский торрент трекер, поэтому можно использовать русский язык. 
-        Обычно название дублируется на английском, но не всегда.
-        В названии можно использовать год, например: "Матрица 1999".
-        
-        Разрешено использовать:
-        - Название на русском
-        - Название на английском
-        - Год
-        - "Сезон 2"
-
-        Запрещено использовать:
-        - "Серия: 3"
-        
-        Вот больше примеров как называются торренты (а ты будешь искать по этим названиям):
-        - Одни из нас / The Last of Us / Сезон: 2 / Серии: 1-2 из 7 (Крэйг Мэйзин) [2025, Канада, США, ужасы, фантастика, боевик, драма, WEB-DLRip] MVO (HDRezka Studio)
-        - Список заветных желаний / The Life List (Адам Брукс / Adam Brooks) [2025, США, драма, мелодрама, комедия, WEB-DLRip-AVC] MVO (заКАДРЫ)
-        - Ущелье / The Gorge (Скотт Дерриксон / Scott Derrickson) [2025, Великобритания, США, фантастика, боевик, мелодрама, WEB-DLRip] Dub (Red Head Sound)
-      `),
+      title: z
+        .string()
+        .describe(`Movie or TV show title ru or (and) en, e.g. "Титаник" or "Titanic"`),
+      year: z.string().optional().describe(`Movie or TV show year, e.g. "2023"`),
+      season: z.string().optional().describe(`TV show season, e.g. "1", "2", etc.`),
     }),
   })
-  async search({ query }) {
+  async search({ title, year, season }: { title: string; year?: string; season?: string }) {
+    let query = title;
+    if (year) {
+      query += ` ${year}`;
+    }
+    if (season) {
+      query += ` Сезон: ${season}`;
+    }
+
     try {
       // Check login status
       if (!this.rutrackerService.getLoginStatus()) {
