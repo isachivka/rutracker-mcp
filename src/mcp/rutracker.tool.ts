@@ -2,10 +2,17 @@ import { Injectable } from '@nestjs/common';
 import { Tool } from '@rekog/mcp-nest';
 import { z } from 'zod';
 import { RutrackerService } from '../rutracker/rutracker.service';
+import { CONFIG } from '../config';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class RutrackerTool {
-  constructor(private readonly rutrackerService: RutrackerService) {}
+  private readonly ETA_SPEED = this.configService.get<number>(CONFIG.RUTRACKER.ETA_SPEED, 100);
+
+  constructor(
+    private readonly rutrackerService: RutrackerService,
+    private readonly configService: ConfigService,
+  ) {}
 
   @Tool({
     name: 'rutracker-search',
@@ -39,14 +46,21 @@ export class RutrackerTool {
       // Format results
       const formattedResults = searchResults
         .sort((a, b) => b.seeders - a.seeders) // Sort by seeders in descending order
-        .map(result => ({
-          id: result.id,
-          name: result.name,
-          size: result.size,
-          seeders: result.seeders,
-          leechers: result.leechers,
-          pubDate: result.pubDate,
-        }));
+        .map(result => {
+          const sizeInMegabytes = Math.ceil(result.size / 1024 / 1024);
+          const etaInMinutes = Math.ceil(sizeInMegabytes / (this.ETA_SPEED / 8) / 60);
+          const pubDateHuman = new Date(result.pubDate * 1000).toLocaleString();
+
+          return {
+            id: result.id,
+            name: result.name,
+            size: `${sizeInMegabytes} Megabytes`,
+            etaInMinutes: `${etaInMinutes} minutes`,
+            seeders: result.seeders,
+            leechers: result.leechers,
+            pubDate: pubDateHuman,
+          };
+        });
 
       return {
         content: [

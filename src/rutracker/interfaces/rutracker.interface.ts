@@ -28,7 +28,7 @@ export interface PageVisitResult {
 export interface TorrentSearchResult {
   id: string;
   name: string;
-  size: string;
+  size: number;
   seeders: number;
   leechers: number;
   pubDate: number;

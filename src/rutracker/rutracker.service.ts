@@ -288,7 +288,7 @@ export class RutrackerService extends BaseTorrentTrackerService {
       const result: TorrentSearchResult = {
         id,
         name: this.decodeHtmlEntities(name),
-        size: `${parseInt(size, 10) / 1024 / 1024} Megabytes`,
+        size: parseInt(size, 10),
         seeders,
         leechers: parseInt(leechers, 10),
         pubDate: parseInt(pubDateStr, 10),

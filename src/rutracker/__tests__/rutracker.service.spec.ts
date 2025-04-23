@@ -112,36 +112,19 @@ describe('RutrackerService', () => {
       console.log(`Searching for "${query}" across all pages...`);
 
       // Set a small resultsPerPage to increase chance of pagination
-      const allResults = await service.searchAllPages({
-        query,
-        resultsPerPage: 50, // Set small to ensure multiple pages
-      });
+      const allResults = (
+        await service.searchAllPages({
+          query,
+          resultsPerPage: 50, // Set small to ensure multiple pages
+        })
+      ).sort((a, b) => b.seeders - a.seeders);
 
       console.log(`Found ${allResults.length} total results across all pages`);
 
       // Log some sample results for debugging
       if (allResults.length > 0) {
         console.log('Sample results:');
-        console.log(
-          allResults.slice(0, 3).map(r => ({
-            id: r.id,
-            name: r.name,
-            seeders: r.seeders,
-            leechers: r.leechers,
-          })),
-        );
-
-        if (allResults.length > 10) {
-          console.log('Results from next page:');
-          console.log(
-            allResults.slice(10, 13).map(r => ({
-              id: r.id,
-              name: r.name,
-              seeders: r.seeders,
-              leechers: r.leechers,
-            })),
-          );
-        }
+        console.log(JSON.stringify(allResults, null, '\t'));
       }
 
       // Check that we have results
