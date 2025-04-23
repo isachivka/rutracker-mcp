@@ -655,7 +655,10 @@ export class RutrackerService implements OnModuleInit {
         Buffer.isBuffer(response.body) && response.body.length > 100 && response.body[0] === 100; // 'd' in ASCII is 100
 
       if (!isTorrentFile) {
-        console.error('Response does not appear to be a valid torrent file');
+        console.error(
+          'Response does not appear to be a valid torrent file: \n',
+          response.body.toString(),
+        );
 
         throw new Error('Failed to download valid torrent file');
       }
