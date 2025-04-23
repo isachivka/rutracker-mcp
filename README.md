@@ -46,7 +46,9 @@ Search for torrents on Rutracker.org.
 
 Parameters:
 
-- `query`: Search query
+- `title`: Movie or TV show title in Russian or English
+- `year`: (Optional) Movie or TV show year
+- `season`: (Optional) TV show season
 
 ### rutracker-get-magnet
 
@@ -72,6 +74,14 @@ Parameters:
 
 - `torrentId`: Torrent ID
 
+### plex-get-all-media
+
+Retrieve a list of all movies and TV shows from your Plex server with detailed information about seasons and episodes.
+
+Parameters:
+
+- `type`: (Optional) Type of media to retrieve: "all", "movies", or "shows" (default: "all")
+
 ## Architecture
 
 The server uses an extensible architecture for torrent tracker integration:
@@ -90,11 +100,26 @@ This server implements the Model Context Protocol (MCP), making it compatible wi
 
 The server requires the following environment variables:
 
+### RuTracker Configuration
+
 - `RUTRACKER_USERNAME`: Your Rutracker username
 - `RUTRACKER_PASSWORD`: Your Rutracker password
 - `RUTRACKER_BASE_URL`: (Optional) Base URL for Rutracker (default: https://rutracker.org/forum/)
 - `RUTRACKER_COOKIE_FILE`: (Optional) Path to cookie file (default: rutracker.cookie)
 - `TORRENT_FILES_FOLDER`: (Optional) Path to directory for storing downloaded torrent files (default: ./torrents)
+
+### Plex Configuration
+
+- `PLEX_URL`: URL of your Plex server (e.g., http://localhost:32400)
+- `PLEX_TOKEN`: (Optional) Your Plex authentication token
+- `PLEX_USERNAME`: (Optional) Your Plex username/email - alternative to token
+- `PLEX_PASSWORD`: (Optional) Your Plex password - alternative to token
+
+You can either use `PLEX_TOKEN` directly or provide `PLEX_USERNAME` and `PLEX_PASSWORD` to have the server automatically retrieve and refresh the token.
+
+### App Configuration
+
+- `PORT`: (Optional) Port for the server to listen on (default: 3000)
 
 ## Documentation
 

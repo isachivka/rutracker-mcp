@@ -82,6 +82,12 @@ Downloads a .torrent file for a specific torrent:
 
 - `torrentId`: Torrent ID (string)
 
+#### plex-get-all-media
+
+Retrieves a list of movies and TV shows from Plex server with detailed information about seasons and episodes:
+
+- `type`: Type of media to retrieve: "all", "movies", or "shows" (default: "all")
+
 ### Tool Implementation
 
 Tools are implemented using the `@Tool` decorator from the MCP NestJS package, with parameter validation using Zod schemas. Each tool calls the corresponding method from the RutrackerService.
@@ -135,14 +141,23 @@ app.enableCors({
 src/
 ├── app.service.ts           # Main application service
 ├── main.ts                  # Application entry point
-└── rutracker/               # RuTracker module
-    ├── __tests__/           # Tests for RuTracker module
-    ├── interfaces/          # Interfaces for RuTracker data structures
-    │   └── rutracker.interface.ts  # Type definitions for RuTracker entities
-    ├── utils/               # Utility functions
-    │   └── cookie.utils.ts  # Cookie handling utilities
-    ├── rutracker.module.ts  # RuTracker module definition
-    └── rutracker.service.ts # RuTracker service implementation
+├── mcp/                     # MCP server module
+│   ├── mcp.module.ts        # MCP module configuration
+│   ├── rutracker.tool.ts    # RuTracker MCP tools implementation
+│   └── plex.tool.ts         # Plex MCP tools implementation
+├── rutracker/               # RuTracker module
+│   ├── __tests__/           # Tests for RuTracker module
+│   ├── interfaces/          # Interfaces for RuTracker data structures
+│   │   └── rutracker.interface.ts  # Type definitions for RuTracker entities
+│   ├── utils/               # Utility functions
+│   │   └── cookie.utils.ts  # Cookie handling utilities
+│   ├── rutracker.module.ts  # RuTracker module definition
+│   └── rutracker.service.ts # RuTracker service implementation
+└── plex/                    # Plex module
+    ├── interfaces/          # Interfaces for Plex data structures
+    │   └── plex.interface.ts  # Type definitions for Plex entities
+    ├── plex.module.ts       # Plex module definition
+    └── plex.service.ts      # Plex service implementation
 ```
 
 ## Development Workflow
@@ -483,3 +498,105 @@ If deployment fails, check:
 3. Server disk space and resource utilization
 4. Application logs on the server
 5. Docker logs if using container-based deployment
+
+## Plex Module
+
+### Overview
+
+The Plex module provides functionality to interact with a Plex Media Server, allowing the retrieval of information about movies and TV shows stored in the user's media library.
+
+### Authentication
+
+The module supports two methods of authentication with Plex:
+
+1. **Direct Token Authentication**: Using a pre-obtained Plex authentication token
+
+   - Configure using the `PLEX_TOKEN` environment variable
+   - Simplest method, but tokens may eventually expire
+
+2. **Username/Password Authentication**: Using Plex account credentials
+   - Configure using the `PLEX_USERNAME` and `PLEX_PASSWORD` environment variables
+   - More robust as the server can automatically obtain and refresh tokens
+   - Handles token expiration automatically
+
+When both methods are configured, the module will use the token first, and if that fails or expires, it will automatically attempt to obtain a new token using the credentials.
+
+### Components
+
+#### PlexService
+
+The core service responsible for interacting with the Plex API.
+
+```typescript
+// Key methods
+getLibraries(): Promise<PlexResponse<PlexLibrary[]>>
+getAllMedia(libraryTypes: string[] = ['movie', 'show']): Promise<PlexResponse<PlexMediaItem[]>>
+private getValidToken(): Promise<string>  // Handles token management and refresh
+```
+
+#### Data Structures
+
+The module uses the following interfaces:
+
+```typescript
+// Configuration for Plex connection
+interface PlexConfig {
+  baseUrl: string;
+  token?: string;
+  username?: string;
+  password?: string;
+}
+
+// Represents a movie or TV show in Plex
+interface PlexMediaItem {
+  title: string;
+  year?: number;
+  type: 'movie' | 'show' | 'episode';
+  addedAt: Date;
+  summary?: string;
+  thumb?: string;
+  duration?: number;
+  ratingKey?: string;
+  seasons?: PlexSeason[]; // For TV shows - list of seasons
+}
+
+// Represents a season of a TV show
+interface PlexSeason {
+  title: string;
+  index: number;
+  episodes: PlexEpisode[];
+}
+
+// Represents an episode of a TV show
+interface PlexEpisode {
+  title: string;
+  index: number;
+  summary?: string;
+  duration?: number;
+  addedAt: string;
+}
+
+// Represents a library section in Plex
+interface PlexLibrary {
+  key: string;
+  type: string;
+  title: string;
+}
+
+// Standard response format for Plex operations
+interface PlexResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+```
+
+### MCP Tools
+
+The module provides one MCP tool:
+
+1. **plex-get-all-media**: Retrieves a list of all movies and TV shows from the Plex server, including detailed information about seasons and episodes for TV shows.
+
+```
+
+```
