@@ -1,14 +1,10 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
-import axios, { AxiosRequestConfig, Method } from 'axios';
+import { Injectable } from '@nestjs/common';
 import {
-  Cookie,
-  PageVisitResult,
   SearchOptions,
   SearchResponse,
   TorrentSearchResult,
   TorrentDetails,
   TorrentDetailsOptions,
-  VisitOptions,
 } from './interfaces/rutracker.interface';
 import { parseCookies } from './utils/cookie.utils';
 import * as iconv from 'iconv-lite';
@@ -17,26 +13,18 @@ import { CONFIG } from '../config';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as TurndownService from 'turndown';
+import { BaseTorrentTrackerService, PageVisitResult } from '../common/base-tracker.service';
 
 @Injectable()
-export class RutrackerService implements OnModuleInit {
-  private cookies: Cookie[] = [];
-  private rawCookies: string[] = [];
-  private readonly baseUrl: string;
-  private readonly username: string;
-  private readonly password: string;
-  private isLoggedIn: boolean = false;
-  private readonly cookieFilePath: string;
-  private isReloggingIn: boolean = false; // Flag to prevent login recursion
-  private readonly torrentFilesFolder: string;
-
+export class RutrackerService extends BaseTorrentTrackerService {
   private readonly RE_RESULTS = new RegExp('Результатов\\sпоиска:\\s(\\d{1,3})\\s<span', 's');
   private readonly RESULTS_PER_PAGE = 50;
   private readonly turndownService: {
     turndown: (content: string) => string;
   };
 
-  constructor(private configService: ConfigService) {
+  constructor(configService: ConfigService) {
+    super(configService);
     this.turndownService = new TurndownService();
 
     this.baseUrl = this.configService.get<string>(
@@ -74,69 +62,9 @@ export class RutrackerService implements OnModuleInit {
   }
 
   /**
-   * Initialize the service by loading cookies from file
-   */
-  async onModuleInit() {
-    console.log('🔄 Initializing RutrackerService, loading cookies from file...');
-    await this.loadCookiesFromFile();
-    this.updateLoginStatus();
-    console.log(`👤 Initial login status: ${this.isLoggedIn}`);
-  }
-
-  /**
-   * Load cookies from the cookie file
-   */
-  private async loadCookiesFromFile(): Promise<void> {
-    try {
-      if (fs.existsSync(this.cookieFilePath)) {
-        const cookieData = await fs.promises.readFile(this.cookieFilePath, 'utf8');
-        if (cookieData) {
-          const cookies = JSON.parse(cookieData);
-          if (Array.isArray(cookies)) {
-            this.cookies = cookies;
-
-            // Generate raw cookies for headers
-            this.rawCookies = cookies.map(
-              cookie => `${cookie.name}=${cookie.value}; path=${cookie.path}`,
-            );
-
-            console.log(`Loaded ${cookies.length} cookies from file`);
-          }
-        }
-      }
-    } catch (error) {
-      console.error(`Error loading cookies from file: ${error.message}`);
-    }
-  }
-
-  /**
-   * Save cookies to the cookie file
-   */
-  private async saveCookiesToFile(): Promise<void> {
-    try {
-      const dirPath = path.dirname(this.cookieFilePath);
-
-      // Ensure directory exists
-      if (!fs.existsSync(dirPath)) {
-        await fs.promises.mkdir(dirPath, { recursive: true });
-      }
-
-      await fs.promises.writeFile(
-        this.cookieFilePath,
-        JSON.stringify(this.cookies, null, 2),
-        'utf8',
-      );
-
-      console.log(`Saved ${this.cookies.length} cookies to file`);
-    } catch (error) {
-      console.error(`Error saving cookies to file: ${error.message}`);
-    }
-  }
-
-  /**
    * Update login status based on whether bb_session cookie exists
    */
-  private updateLoginStatus(): void {
+  protected updateLoginStatus(): void {
     const bbSessionCookie = this.cookies.find(cookie => cookie.name === 'bb_session');
     this.isLoggedIn = !!bbSessionCookie;
     console.log(`Login status updated: ${this.isLoggedIn}`);
@@ -147,7 +75,7 @@ export class RutrackerService implements OnModuleInit {
    * @param html HTML content to check
    * @returns Whether the user appears to be logged in
    */
-  private isLoggedInByHtml(html: string): boolean {
+  protected isLoggedInByHtml(html: string): boolean {
     if (!this.username) return false;
 
     // Look for the logged-in username element
@@ -160,112 +88,9 @@ export class RutrackerService implements OnModuleInit {
   }
 
   /**
-   * Generic method to visit any page on RuTracker with improved parameters
-   * @param page The page path (relative to baseUrl)
-   * @param options Visit options including method, data, and other settings
-   * @returns Promise with visit result (cookies and page body)
-   */
-  async visit(page: string, options: VisitOptions = {}): Promise<PageVisitResult> {
-    const {
-      method = 'GET',
-      data,
-      allowRedirects = true,
-      checkSession = true,
-      isBinary = false,
-    } = options;
-
-    const url = this.baseUrl + page;
-
-    try {
-      // Setup request configuration
-      const requestConfig = this.createRequestConfig(url, method, data, allowRedirects);
-
-      // Execute the request
-      const response = await axios(requestConfig);
-
-      // Process cookies from response
-      await this.processCookiesFromResponse(response);
-
-      // Process response body
-      const body = this.processResponseBody(response, isBinary);
-
-      // Check session validity and relogin if necessary
-      if (this.shouldCheckSession(isBinary, checkSession, page)) {
-        const isLoggedInByHtml = this.isLoggedInByHtml(body);
-
-        if (!isLoggedInByHtml && this.username && this.password) {
-          console.log('Session appears to be expired, attempting to re-login');
-          const reLoginResult = await this.handleSessionReLogin();
-
-          if (reLoginResult) {
-            console.log('Re-login successful, repeating original request');
-            // Repeat the original request with session check disabled
-            return this.visit(page, {
-              ...options,
-              checkSession: false, // Prevent infinite recursion
-            });
-          }
-        }
-      }
-
-      return {
-        cookies: this.cookies,
-        body,
-        statusCode: response.status,
-      };
-    } catch (error) {
-      console.error('Error visiting RuTracker:', error.message);
-      throw error;
-    }
-  }
-
-  /**
-   * Creates request configuration for axios
-   */
-  private createRequestConfig(
-    url: string,
-    method: Method,
-    data?: any,
-    allowRedirects: boolean = true,
-  ): AxiosRequestConfig {
-    const options: AxiosRequestConfig = {
-      method,
-      url,
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
-        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Accept-Encoding': 'gzip, deflate, br',
-        Connection: 'keep-alive',
-        'Upgrade-Insecure-Requests': '1',
-        'Cache-Control': 'max-age=0',
-      },
-      maxRedirects: allowRedirects ? 5 : 0, // Only follow redirects if allowed
-      validateStatus: allowRedirects
-        ? _status => _status < 400 // Only reject if status code is >= 400 when redirects are allowed
-        : () => true, // Accept all status codes when disabling redirects
-      responseType: 'arraybuffer', // Important for correct encoding handling
-    };
-
-    // Add cookies if we have them from previous requests
-    if (this.rawCookies.length > 0) {
-      const cookieHeader = this.rawCookies.map(cookie => cookie.split(';')[0]).join('; ');
-      options.headers['Cookie'] = cookieHeader;
-    }
-
-    // Add data for non-GET requests
-    if (data && method !== 'GET') {
-      options.data = data;
-    }
-
-    return options;
-  }
-
-  /**
    * Process cookies from response
    */
-  private async processCookiesFromResponse(response: any): Promise<void> {
+  protected async processCookiesFromResponse(response: any): Promise<void> {
     const setCookieHeaders = response.headers['set-cookie'];
     if (setCookieHeaders) {
       this.rawCookies = setCookieHeaders;
@@ -281,55 +106,18 @@ export class RutrackerService implements OnModuleInit {
   }
 
   /**
-   * Process response body based on binary flag
+   * Decode response data with appropriate encoding for RuTracker
    */
-  private processResponseBody(response: any, isBinary: boolean): any {
-    if (isBinary) {
-      // For binary data, don't attempt to decode and just return the raw buffer
-      return Buffer.from(response.data);
-    }
-
-    // Convert body from Windows-1251 to UTF-8 for text data
-    const contentType = response.headers['content-type'] || '';
-
-    if (response.data) {
-      // Check if content-type header indicates Windows-1251 encoding
-      if (contentType.includes('windows-1251') || contentType.includes('charset=windows-1251')) {
-        return iconv.decode(Buffer.from(response.data), 'win1251');
-      } else {
-        // Auto-detect encoding or use win1251 by default for RuTracker
-        return iconv.decode(Buffer.from(response.data), 'win1251');
-      }
-    }
-
-    return '';
+  protected decodeResponseData(data: Buffer): string {
+    // RuTracker uses windows-1251 encoding by default
+    return iconv.decode(data, 'win1251');
   }
 
   /**
-   * Check if session validation should be performed
+   * Check if page is login page
    */
-  private shouldCheckSession(isBinary: boolean, checkSession: boolean, page: string): boolean {
-    return (
-      !isBinary && checkSession && page !== 'login.php' && !this.isReloggingIn && !!this.username
-    );
-  }
-
-  /**
-   * Handle session re-login process
-   */
-  private async handleSessionReLogin(): Promise<boolean> {
-    this.isReloggingIn = true;
-
-    try {
-      // Clear all cookies before re-login attempt
-      await this.clearCookies();
-
-      // Try to login again
-      const loginSuccess = await this.login();
-      return loginSuccess;
-    } finally {
-      this.isReloggingIn = false;
-    }
+  protected isLoginPage(page: string): boolean {
+    return page === 'login.php';
   }
 
   /**
@@ -382,14 +170,6 @@ export class RutrackerService implements OnModuleInit {
       this.isLoggedIn = false;
       return false;
     }
-  }
-
-  /**
-   * Check if the service is currently logged in
-   * @returns Current login status
-   */
-  getLoginStatus(): boolean {
-    return this.isLoggedIn;
   }
 
   /**
@@ -548,21 +328,6 @@ export class RutrackerService implements OnModuleInit {
   }
 
   /**
-   * Decode HTML entities in a string
-   * @param text Text with HTML entities
-   * @returns Decoded text
-   */
-  private decodeHtmlEntities(text: string): string {
-    // Basic HTML entity decoding
-    return text
-      .replace(/&quot;/g, '"')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(code));
-  }
-
-  /**
    * Get details for a torrent topic by ID
    * @param options Options with torrent ID
    * @returns Promise with torrent details
@@ -633,24 +398,6 @@ export class RutrackerService implements OnModuleInit {
 
     // Remove newlines and tabs
     return processedContent.replace(/[\n\t]/g, '');
-  }
-
-  /**
-   * Clear all cookies in memory and in the cookie file
-   */
-  private async clearCookies(): Promise<void> {
-    console.log('Clearing all cookies from memory and file');
-    this.cookies = [];
-    this.rawCookies = [];
-    this.isLoggedIn = false;
-
-    try {
-      // Clear the cookie file by writing an empty array
-      await fs.promises.writeFile(this.cookieFilePath, JSON.stringify([]), 'utf8');
-      console.log('Cookie file cleared');
-    } catch (error) {
-      console.error(`Error clearing cookie file: ${error.message}`);
-    }
   }
 
   /**

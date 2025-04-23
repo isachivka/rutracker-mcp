@@ -61,6 +61,7 @@ describe('RutrackerService', () => {
       const visitSpy = jest.spyOn(service, 'visit').mockResolvedValueOnce({
         cookies: [],
         body: 'test body',
+        statusCode: 200,
       });
 
       await service.visitMainPage();

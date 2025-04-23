@@ -32,7 +32,6 @@ export interface TorrentSearchResult {
   seeders: number;
   leechers: number;
   pubDate: number;
-  magnetLink?: string;
   downloadLink: string;
   topicLink: string;
 }
@@ -76,9 +75,9 @@ export interface ApiSearchResponse {
 export interface TorrentDetails {
   id: string;
   title?: string;
-  content: string; // HTML content from the post message
+  content: string;
   magnetLink?: string;
-  downloadLink?: string;
+  downloadLink: string;
 }
 
 /**

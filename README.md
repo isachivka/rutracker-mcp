@@ -8,6 +8,7 @@ A Model Context Protocol (MCP) server implementation for interacting with Rutrac
 - Get magnet links for torrents
 - Get detailed information about torrents
 - MCP compliant API for AI integration
+- Extensible architecture for adding more torrent trackers
 
 ## Installation
 
@@ -70,6 +71,16 @@ Download a .torrent file for a specific torrent.
 Parameters:
 
 - `torrentId`: Torrent ID
+
+## Architecture
+
+The server uses an extensible architecture for torrent tracker integration:
+
+- Base abstract class `BaseTorrentTrackerService` containing common functionality
+- Specific implementations for each tracker (currently only RuTracker)
+- Easy to add new trackers by extending the base class
+
+For more detailed information about the architecture, see [TRACKERS_ARCHITECTURE.md](./docs/TRACKERS_ARCHITECTURE.md).
 
 ## Using with AI
 
