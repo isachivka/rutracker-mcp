@@ -1,3 +1,5 @@
+import { Method } from 'axios';
+
 /**
  * Cookie interface to store parsed cookie information
  */
@@ -93,4 +95,38 @@ export interface ApiTorrentDetailsResponse {
  */
 export interface TorrentDetailsOptions {
   id: string;
+}
+
+/**
+ * Options for the visit method
+ */
+export interface VisitOptions {
+  /**
+   * HTTP method to use
+   * @default 'GET'
+   */
+  method?: Method;
+
+  /**
+   * Optional data to send with request (for POST, PUT, etc.)
+   */
+  data?: any;
+
+  /**
+   * Whether to allow automatic redirects
+   * @default true
+   */
+  allowRedirects?: boolean;
+
+  /**
+   * Whether to check if session is valid and relogin if needed
+   * @default true
+   */
+  checkSession?: boolean;
+
+  /**
+   * Whether to treat response as binary data without decoding
+   * @default false
+   */
+  isBinary?: boolean;
 }

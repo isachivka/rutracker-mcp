@@ -8,6 +8,7 @@ import {
   TorrentSearchResult,
   TorrentDetails,
   TorrentDetailsOptions,
+  VisitOptions,
 } from './interfaces/rutracker.interface';
 import { parseCookies } from './utils/cookie.utils';
 import * as iconv from 'iconv-lite';
@@ -29,14 +30,7 @@ export class RutrackerService implements OnModuleInit {
   private isReloggingIn: boolean = false; // Flag to prevent login recursion
   private readonly torrentFilesFolder: string;
 
-  // RegExp patterns for searching
-  private readonly RE_TORRENTS = new RegExp(
-    '<a\\sdata-topic_id="(\\d+?)".+?">(.+?)</a.+?tor-size"\\sdata-ts_text="(\\d+?)">.+?data-ts_text="([-\\d]+?)">.+?Личи">(\\d+?)</.+?data-ts_text="(\\d+?)">',
-    'gs',
-  );
   private readonly RE_RESULTS = new RegExp('Результатов\\sпоиска:\\s(\\d{1,3})\\s<span', 's');
-  private readonly SEARCH_PATTERN = '%stracker.php?nm=%s';
-  private readonly PAGE_PATTERN = '%s&start=%s';
   private readonly RESULTS_PER_PAGE = 50;
   private readonly turndownService: {
     turndown: (content: string) => string;
@@ -166,127 +160,50 @@ export class RutrackerService implements OnModuleInit {
   }
 
   /**
-   * Generic method to visit any page on RuTracker
+   * Generic method to visit any page on RuTracker with improved parameters
    * @param page The page path (relative to baseUrl)
-   * @param method HTTP method to use
-   * @param data Optional data to send with request (for POST, PUT, etc.)
-   * @param allowRedirects Whether to allow automatic redirects
-   * @param checkSession Whether to check if session is valid and relogin if needed
-   * @param isBinary Whether to treat response as binary data without decoding
+   * @param options Visit options including method, data, and other settings
    * @returns Promise with visit result (cookies and page body)
    */
-  async visit(
-    page: string,
-    method: Method = 'GET',
-    data?: any,
-    allowRedirects: boolean = true,
-    checkSession: boolean = true,
-    isBinary: boolean = false,
-  ): Promise<PageVisitResult> {
+  async visit(page: string, options: VisitOptions = {}): Promise<PageVisitResult> {
+    const {
+      method = 'GET',
+      data,
+      allowRedirects = true,
+      checkSession = true,
+      isBinary = false,
+    } = options;
+
     const url = this.baseUrl + page;
 
     try {
-      const options: AxiosRequestConfig = {
-        method,
-        url,
-        headers: {
-          'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
-          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.5',
-          'Accept-Encoding': 'gzip, deflate, br',
-          Connection: 'keep-alive',
-          'Upgrade-Insecure-Requests': '1',
-          'Cache-Control': 'max-age=0',
-        },
-        maxRedirects: allowRedirects ? 5 : 0, // Only follow redirects if allowed
-        validateStatus: allowRedirects
-          ? _status => _status < 400 // Only reject if status code is >= 400 when redirects are allowed
-          : () => true, // Accept all status codes when disabling redirects
-        responseType: 'arraybuffer', // Important for correct encoding handling
-      };
+      // Setup request configuration
+      const requestConfig = this.createRequestConfig(url, method, data, allowRedirects);
 
-      // Add cookies if we have them from previous requests
-      if (this.rawCookies.length > 0) {
-        const cookieHeader = this.rawCookies.map(cookie => cookie.split(';')[0]).join('; ');
-        options.headers['Cookie'] = cookieHeader;
-      }
+      // Execute the request
+      const response = await axios(requestConfig);
 
-      // Add data for non-GET requests
-      if (data && method !== 'GET') {
-        options.data = data;
-      }
-
-      const response = await axios(options);
-
-      // Extract cookies from response
-      const setCookieHeaders = response.headers['set-cookie'];
-      if (setCookieHeaders) {
-        this.rawCookies = setCookieHeaders;
-        this.cookies = [...this.cookies, ...parseCookies(setCookieHeaders)];
-        console.log('Cookies saved:', this.cookies);
-
-        // Save cookies to file after each update
-        await this.saveCookiesToFile();
-
-        // Update login status
-        this.updateLoginStatus();
-      }
+      // Process cookies from response
+      await this.processCookiesFromResponse(response);
 
       // Process response body
-      let body;
+      const body = this.processResponseBody(response, isBinary);
 
-      if (isBinary) {
-        // For binary data, don't attempt to decode and just return the raw buffer
-        body = Buffer.from(response.data);
-      } else {
-        // Convert body from Windows-1251 to UTF-8 for text data
-        const contentType = response.headers['content-type'] || '';
-
-        if (response.data) {
-          // Check if content-type header indicates Windows-1251 encoding
-          if (
-            contentType.includes('windows-1251') ||
-            contentType.includes('charset=windows-1251')
-          ) {
-            body = iconv.decode(Buffer.from(response.data), 'win1251');
-          } else {
-            // Auto-detect encoding or use win1251 by default for RuTracker
-            body = iconv.decode(Buffer.from(response.data), 'win1251');
-          }
-        }
-      }
-
-      // Check if login session is valid by looking for username in HTML
-      // Only for non-login requests and when not already in the process of re-logging in
-      if (
-        !isBinary &&
-        checkSession &&
-        page !== 'login.php' &&
-        !this.isReloggingIn &&
-        this.username
-      ) {
+      // Check session validity and relogin if necessary
+      if (this.shouldCheckSession(isBinary, checkSession, page)) {
         const isLoggedInByHtml = this.isLoggedInByHtml(body);
-        console.log(`Username check in HTML: ${isLoggedInByHtml ? 'FOUND' : 'NOT FOUND'}`);
 
         if (!isLoggedInByHtml && this.username && this.password) {
           console.log('Session appears to be expired, attempting to re-login');
-          this.isReloggingIn = true;
+          const reLoginResult = await this.handleSessionReLogin();
 
-          // Clear all cookies before re-login attempt
-          await this.clearCookies();
-
-          // Try to login again
-          const loginSuccess = await this.login();
-
-          if (loginSuccess) {
+          if (reLoginResult) {
             console.log('Re-login successful, repeating original request');
-            // Repeat the original request now that we're logged in
-            this.isReloggingIn = false;
-            return this.visit(page, method, data, allowRedirects, false, isBinary); // Don't check session again
-          } else {
-            console.error('Failed to re-login');
-            this.isReloggingIn = false;
+            // Repeat the original request with session check disabled
+            return this.visit(page, {
+              ...options,
+              checkSession: false, // Prevent infinite recursion
+            });
           }
         }
       }
@@ -299,6 +216,119 @@ export class RutrackerService implements OnModuleInit {
     } catch (error) {
       console.error('Error visiting RuTracker:', error.message);
       throw error;
+    }
+  }
+
+  /**
+   * Creates request configuration for axios
+   */
+  private createRequestConfig(
+    url: string,
+    method: Method,
+    data?: any,
+    allowRedirects: boolean = true,
+  ): AxiosRequestConfig {
+    const options: AxiosRequestConfig = {
+      method,
+      url,
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Accept-Encoding': 'gzip, deflate, br',
+        Connection: 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
+        'Cache-Control': 'max-age=0',
+      },
+      maxRedirects: allowRedirects ? 5 : 0, // Only follow redirects if allowed
+      validateStatus: allowRedirects
+        ? _status => _status < 400 // Only reject if status code is >= 400 when redirects are allowed
+        : () => true, // Accept all status codes when disabling redirects
+      responseType: 'arraybuffer', // Important for correct encoding handling
+    };
+
+    // Add cookies if we have them from previous requests
+    if (this.rawCookies.length > 0) {
+      const cookieHeader = this.rawCookies.map(cookie => cookie.split(';')[0]).join('; ');
+      options.headers['Cookie'] = cookieHeader;
+    }
+
+    // Add data for non-GET requests
+    if (data && method !== 'GET') {
+      options.data = data;
+    }
+
+    return options;
+  }
+
+  /**
+   * Process cookies from response
+   */
+  private async processCookiesFromResponse(response: any): Promise<void> {
+    const setCookieHeaders = response.headers['set-cookie'];
+    if (setCookieHeaders) {
+      this.rawCookies = setCookieHeaders;
+      this.cookies = [...this.cookies, ...parseCookies(setCookieHeaders)];
+      console.log('Cookies saved:', this.cookies);
+
+      // Save cookies to file after each update
+      await this.saveCookiesToFile();
+
+      // Update login status
+      this.updateLoginStatus();
+    }
+  }
+
+  /**
+   * Process response body based on binary flag
+   */
+  private processResponseBody(response: any, isBinary: boolean): any {
+    if (isBinary) {
+      // For binary data, don't attempt to decode and just return the raw buffer
+      return Buffer.from(response.data);
+    }
+
+    // Convert body from Windows-1251 to UTF-8 for text data
+    const contentType = response.headers['content-type'] || '';
+
+    if (response.data) {
+      // Check if content-type header indicates Windows-1251 encoding
+      if (contentType.includes('windows-1251') || contentType.includes('charset=windows-1251')) {
+        return iconv.decode(Buffer.from(response.data), 'win1251');
+      } else {
+        // Auto-detect encoding or use win1251 by default for RuTracker
+        return iconv.decode(Buffer.from(response.data), 'win1251');
+      }
+    }
+
+    return '';
+  }
+
+  /**
+   * Check if session validation should be performed
+   */
+  private shouldCheckSession(isBinary: boolean, checkSession: boolean, page: string): boolean {
+    return (
+      !isBinary && checkSession && page !== 'login.php' && !this.isReloggingIn && !!this.username
+    );
+  }
+
+  /**
+   * Handle session re-login process
+   */
+  private async handleSessionReLogin(): Promise<boolean> {
+    this.isReloggingIn = true;
+
+    try {
+      // Clear all cookies before re-login attempt
+      await this.clearCookies();
+
+      // Try to login again
+      const loginSuccess = await this.login();
+      return loginSuccess;
+    } finally {
+      this.isReloggingIn = false;
     }
   }
 
@@ -327,7 +357,12 @@ export class RutrackerService implements OnModuleInit {
 
       // Submit login form WITHOUT allowing redirects to capture cookies
       // Don't check session validity for login request (to avoid recursion)
-      await this.visit('login.php', 'POST', formData, false, false);
+      await this.visit('login.php', {
+        method: 'POST',
+        data: formData,
+        allowRedirects: false,
+        checkSession: false,
+      });
 
       // Check if bb_session cookie was set after login attempt
       const bbSessionCookie = this.cookies.find(cookie => cookie.name === 'bb_session');
@@ -646,8 +681,13 @@ export class RutrackerService implements OnModuleInit {
 
       console.log(`Sending request to download URL: ${this.baseUrl}${downloadUrl}`);
 
-      // Download the torrent file with binary response type - set isBinary flag to true
-      const response = await this.visit(downloadUrl, 'GET', undefined, true, true, true);
+      // Download the torrent file with binary response type
+      const response = await this.visit(downloadUrl, {
+        method: 'GET',
+        isBinary: true,
+        allowRedirects: true,
+        checkSession: true,
+      });
 
       // Make sure the response is a torrent file
       // For binary data, check if it's a Buffer and has a reasonable size
