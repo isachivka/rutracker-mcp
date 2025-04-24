@@ -27,6 +27,7 @@ export class TmdbService {
 
       return response.data.results[0]; // Return first match
     } catch (error) {
+      this.logger.error(error);
       this.logger.error(`Failed to search show: ${error.message}`);
       throw error;
     }
