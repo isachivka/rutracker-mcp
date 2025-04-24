@@ -5,6 +5,8 @@ import { RutrackerModule } from '../rutracker/rutracker.module';
 import { ConfigModule } from '../config';
 import { PlexTool } from './plex.tool';
 import { PlexModule } from '../plex/plex.module';
+import { TmdbModule } from '../tmdb/tmdb.module';
+import { TmdbTool } from './tmdb.tool';
 
 @Module({
   imports: [
@@ -15,8 +17,9 @@ import { PlexModule } from '../plex/plex.module';
     }),
     RutrackerModule,
     PlexModule,
+    TmdbModule,
   ],
-  providers: [RutrackerTool, PlexTool],
+  providers: [RutrackerTool, PlexTool, TmdbTool],
   exports: [McpModule],
 })
 export class McpServerModule {}

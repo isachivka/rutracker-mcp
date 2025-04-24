@@ -27,6 +27,7 @@
     "@nestjs/core": "^10.0.0",
     "@nestjs/platform-express": "^10.0.0",
     "@rekog/mcp-nest": "^1.5.0-beta.1",
+    "@types/node-fetch": "^2.6.12",
     "axios": "^1.8.4",
     "iconv-lite": "^0.6.3",
     "reflect-metadata": "^0.2.0",
