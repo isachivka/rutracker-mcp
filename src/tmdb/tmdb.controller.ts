@@ -15,15 +15,28 @@ export class TmdbController {
       };
     }
 
-    const seasonInfo = await this.tmdbService.getSeasonDetails(show.id, seasonNumber);
+    try {
+      const seasonInfo = await this.tmdbService.getSeasonDetails(show.id, seasonNumber);
 
-    return {
-      showTitle: show.name,
-      originalTitle: show.original_name,
-      seasonNumber: seasonInfo.seasonNumber,
-      totalEpisodes: seasonInfo.totalEpisodes,
-      airedEpisodes: seasonInfo.airedEpisodes,
-      schedule: seasonInfo.schedule,
-    };
+      return {
+        showTitle: show.name,
+        originalTitle: show.original_name,
+        seasonNumber: seasonInfo.seasonNumber,
+        totalEpisodes: seasonInfo.totalEpisodes,
+        airedEpisodes: seasonInfo.airedEpisodes,
+        schedule: seasonInfo.schedule,
+      };
+    } catch (error) {
+      console.error(error);
+      return {
+        showTitle: show.name,
+        originalTitle: show.original_name,
+        seasonNumber: seasonNumber,
+        totalEpisodes: 0,
+        airedEpisodes: 0,
+        schedule: [],
+        error: 'Failed to get season info',
+      };
+    }
   }
 }
