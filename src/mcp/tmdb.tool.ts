@@ -17,7 +17,7 @@ export class TmdbTool {
   })
   async getSeasonInfo({ title, seasonNumber }: { title: string; seasonNumber: number }) {
     try {
-      // Сначала ищем сериал по названию
+      // First, search for the TV show by title
       const show = await this.tmdbService.searchShow(title);
 
       if (!show) {
@@ -25,13 +25,13 @@ export class TmdbTool {
           content: [
             {
               type: 'text',
-              text: `Не удалось найти сериал "${title}" в TMDB`,
+              text: `TV show "${title}" not found in TMDB`,
             },
           ],
         };
       }
 
-      // Получаем информацию о сезоне
+      // Get season information
       const seasonInfo = await this.tmdbService.getSeasonDetails(show.id, seasonNumber);
 
       return {
@@ -58,7 +58,7 @@ export class TmdbTool {
         content: [
           {
             type: 'text',
-            text: `Ошибка при получении информации о сезоне: ${error.message}`,
+            text: `Error getting season information: ${error.message}`,
           },
         ],
       };

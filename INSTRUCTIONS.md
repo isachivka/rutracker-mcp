@@ -82,6 +82,39 @@ Downloads a .torrent file for a specific torrent:
 
 - `torrentId`: Torrent ID (string)
 
+#### tmdb-get-season-info
+
+Retrieves detailed information about TV show seasons from TMDB API:
+
+Implementation details:
+
+```typescript
+@Tool({
+  name: 'tmdb-get-season-info',
+  description: 'Get information about total episodes in a TV show season using TMDB',
+  parameters: z.object({
+    title: z.string().describe('Original title of the TV show'),
+    seasonNumber: z.number().describe('Season number to get information about'),
+  }),
+})
+```
+
+Process flow:
+
+1. Search for TV show by title using TMDB API
+2. If found, fetch detailed season information
+3. Return formatted response with episode count and schedule
+
+Error handling:
+
+- Returns error message if show not found
+- Returns error message if season information cannot be retrieved
+- Includes detailed error logging for debugging
+
+Required environment variables:
+
+- `TMDB_API_KEY`: Your TMDB API key
+
 #### plex-get-all-media
 
 Retrieves a list of movies and TV shows from Plex server with detailed information about seasons and episodes:

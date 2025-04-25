@@ -74,6 +74,33 @@ Parameters:
 
 - `torrentId`: Torrent ID
 
+### tmdb-get-season-info
+
+Get detailed information about TV show seasons from TMDB, including episode count and air dates.
+
+Parameters:
+
+- `title`: Original title of the TV show
+- `seasonNumber`: Season number to get information about
+
+Returns:
+
+```json
+{
+  "showTitle": "Show Name",
+  "originalTitle": "Original Show Name",
+  "seasonNumber": 1,
+  "totalEpisodes": 12,
+  "airedEpisodes": 10,
+  "schedule": [
+    {
+      "episodeNumber": 1,
+      "airDate": "2024-01-01"
+    }
+  ]
+}
+```
+
 ### plex-get-all-media
 
 Retrieve a list of all movies and TV shows from your Plex server with detailed information about seasons and episodes.
@@ -107,6 +134,10 @@ The server requires the following environment variables:
 - `RUTRACKER_BASE_URL`: (Optional) Base URL for Rutracker (default: https://rutracker.org/forum/)
 - `RUTRACKER_COOKIE_FILE`: (Optional) Path to cookie file (default: rutracker.cookie)
 - `TORRENT_FILES_FOLDER`: (Optional) Path to directory for storing downloaded torrent files (default: ./torrents)
+
+### TMDB Configuration
+
+- `TMDB_API_KEY`: Your TMDB API key (get it from https://www.themoviedb.org/settings/api)
 
 ### Plex Configuration
 
