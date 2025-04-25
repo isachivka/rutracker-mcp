@@ -10,9 +10,7 @@ export class TmdbController {
     const show = await this.tmdbService.searchShow(title);
 
     if (!show) {
-      return {
-        error: `TV show "${title}" not found in TMDB`,
-      };
+      throw new Error('TV show "Rick and Morty" not found in TMDB');
     }
 
     try {
@@ -29,8 +27,8 @@ export class TmdbController {
     } catch (error) {
       console.error(error);
       return {
-        showTitle: show.name,
-        originalTitle: show.original_name,
+        showTitle: show ? show.name : title,
+        originalTitle: show ? show.original_name : seasonNumber,
         seasonNumber: seasonNumber,
         totalEpisodes: 0,
         airedEpisodes: 0,

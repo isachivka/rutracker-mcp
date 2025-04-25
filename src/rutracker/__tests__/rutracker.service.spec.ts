@@ -17,7 +17,7 @@ describe('RutrackerService', () => {
       providers: [RutrackerService],
     }).compile();
 
-    service = module.get<RutrackerService>(RutrackerService);
+    service = module.get<RutrackerService>(RutrackerService) as RutrackerService;
 
     // Manually call onModuleInit to load cookies from file
     await service.onModuleInit();

@@ -14,8 +14,8 @@ describe('TmdbController', () => {
       providers: [TmdbService],
     }).compile();
 
-    controller = module.get<TmdbController>(TmdbController);
-    service = module.get<TmdbService>(TmdbService);
+    controller = module.get<TmdbController>(TmdbController) as TmdbController;
+    service = module.get<TmdbService>(TmdbService) as TmdbService;
   });
 
   it('should be defined', () => {
@@ -27,6 +27,10 @@ describe('TmdbController', () => {
     it('should return season information for a valid TV show and season', async () => {
       // Using a well-known TV show for testing
       const result = await controller.getSeasonInfo('Rick and Morty', 8);
+
+      if (!result.hasOwnProperty('totalEpisodes')) {
+        throw new Error('TV show "Rick and Morty" not found in TMDB');
+      }
 
       expect(result).toHaveProperty('showTitle');
       expect(result).toHaveProperty('originalTitle');
