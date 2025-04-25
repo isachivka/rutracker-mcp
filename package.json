@@ -20,7 +20,6 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "prepare": "husky install",
     "type-check": "tsc --noEmit",
-    "type-check:verbose": "tsc --noEmit --pretty",
     "check": "npm run type-check && npm run lint"
   },
   "dependencies": {
