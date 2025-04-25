@@ -71,7 +71,7 @@ export class TmdbService {
         episodeCount: response.data.episodes.length,
         totalEpisodes: response.data.episodes.length,
         airedEpisodes: response.data.episodes.filter(
-          (ep: any) => new Date(ep.air_date) <= new Date(),
+          (ep: any) => ep.air_date && new Date(ep.air_date) <= new Date(),
         ).length,
         schedule: response.data.episodes.map((ep: any) => ({
           episodeNumber: ep.episode_number,

@@ -1,0 +1,53 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`TmdbController getSeasonInfo should return season information for a valid TV show and season 1`] = `
+{
+  "airedEpisodes": 0,
+  "originalTitle": "Rick and Morty",
+  "schedule": [
+    {
+      "airDate": "2025-05-25",
+      "episodeNumber": 1,
+    },
+    {
+      "airDate": null,
+      "episodeNumber": 2,
+    },
+    {
+      "airDate": null,
+      "episodeNumber": 3,
+    },
+    {
+      "airDate": null,
+      "episodeNumber": 4,
+    },
+    {
+      "airDate": null,
+      "episodeNumber": 5,
+    },
+    {
+      "airDate": null,
+      "episodeNumber": 6,
+    },
+    {
+      "airDate": null,
+      "episodeNumber": 7,
+    },
+    {
+      "airDate": null,
+      "episodeNumber": 8,
+    },
+    {
+      "airDate": null,
+      "episodeNumber": 9,
+    },
+    {
+      "airDate": null,
+      "episodeNumber": 10,
+    },
+  ],
+  "seasonNumber": 8,
+  "showTitle": "Rick and Morty",
+  "totalEpisodes": 10,
+}
+`;
