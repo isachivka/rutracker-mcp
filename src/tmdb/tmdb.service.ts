@@ -3,6 +3,47 @@ import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { CONFIG } from '../config/config.constants';
 
+// TMDB API response interfaces
+export interface TmdbTvShow {
+  id: number;
+  name: string;
+  overview: string;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  first_air_date: string;
+  vote_average: number;
+  vote_count: number;
+  popularity: number;
+  original_language: string;
+  original_name: string;
+  genre_ids: number[];
+  origin_country: string[];
+}
+
+export interface TmdbEpisode {
+  id: number;
+  episode_number: number;
+  name: string;
+  overview: string;
+  air_date: string;
+  still_path: string | null;
+  vote_average: number;
+  vote_count: number;
+}
+
+export interface TmdbEpisodeSchedule {
+  episodeNumber: number;
+  airDate: string;
+}
+
+export interface TmdbSeasonDetails {
+  seasonNumber: number;
+  episodeCount: number;
+  totalEpisodes: number;
+  airedEpisodes: number;
+  schedule: TmdbEpisodeSchedule[];
+}
+
 @Injectable()
 export class TmdbService {
   private readonly logger = new Logger(TmdbService.name);
@@ -16,7 +57,7 @@ export class TmdbService {
   /**
    * Search for TV show by title
    */
-  async searchShow(title: string): Promise<any> {
+  async searchShow(title: string): Promise<TmdbTvShow | null> {
     try {
       this.logger.debug(`Searching for TV show with title: ${title}`);
       const response = await axios.get(`${this.baseUrl}/search/tv`, {
@@ -49,7 +90,7 @@ export class TmdbService {
   /**
    * Get season details including episode count
    */
-  async getSeasonDetails(showId: number, seasonNumber: number): Promise<any> {
+  async getSeasonDetails(showId: number, seasonNumber: number): Promise<TmdbSeasonDetails> {
     try {
       this.logger.debug(`Fetching season details for showId: ${showId}, season: ${seasonNumber}`);
       const response = await axios.get(`${this.baseUrl}/tv/${showId}/season/${seasonNumber}`, {
@@ -71,9 +112,9 @@ export class TmdbService {
         episodeCount: response.data.episodes.length,
         totalEpisodes: response.data.episodes.length,
         airedEpisodes: response.data.episodes.filter(
-          (ep: any) => ep.air_date && new Date(ep.air_date) <= new Date(),
+          (ep: TmdbEpisode) => ep.air_date && new Date(ep.air_date) <= new Date(),
         ).length,
-        schedule: response.data.episodes.map((ep: any) => ({
+        schedule: response.data.episodes.map((ep: TmdbEpisode) => ({
           episodeNumber: ep.episode_number,
           airDate: ep.air_date,
         })),
