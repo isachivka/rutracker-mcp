@@ -236,6 +236,7 @@ export class RutrackerService extends BaseTorrentTrackerService {
    */
   async searchAllPages(options: SearchOptions): Promise<TorrentSearchResult[]> {
     const firstPageResults = await this.search(options);
+    console.info(firstPageResults);
 
     // If there's only one page, return the results
     if (!firstPageResults.hasMorePages) {
@@ -251,7 +252,9 @@ export class RutrackerService extends BaseTorrentTrackerService {
     const pagePromises = [];
     for (let i = 2; i <= totalPages; i++) {
       const pageOptions = { ...options, page: i };
-      pagePromises.push(this.search(pageOptions));
+      const nextPageResults = await this.search(pageOptions);
+      console.info(nextPageResults);
+      pagePromises.push(nextPageResults);
     }
 
     // Execute all promises concurrently
