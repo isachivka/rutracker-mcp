@@ -404,6 +404,18 @@ export class RutrackerService extends BaseTorrentTrackerService {
   }
 
   /**
+   * Извлекает form_token из HTML RuTracker (input или window.BB)
+   */
+  private extractFormToken(html: string): string | null {
+    // 1. input
+    let match = html.match(/name="form_token"\s+value="([a-f0-9]{32})"/i);
+    if (match) return match[1];
+    // 2. JS-блок window.BB
+    match = html.match(/form_token:\s*['"]([a-f0-9]{32})['"]/i);
+    return match ? match[1] : null;
+  }
+
+  /**
    * Download .torrent file for a specific torrent
    * @param topicId Topic ID of the torrent
    * @returns Promise with path to the downloaded torrent file
@@ -427,20 +439,32 @@ export class RutrackerService extends BaseTorrentTrackerService {
         await fs.promises.mkdir(this.torrentFilesFolder, { recursive: true });
       }
 
+      // 1. Получаем HTML темы и form_token
+      const topicUrl = `viewtopic.php?t=${topicId}`;
+      const topicResponse = await this.visit(topicUrl);
+      const formToken = this.extractFormToken(topicResponse.body);
+      if (!formToken) {
+        throw new Error('form_token not found in topic page HTML');
+      }
+
+      // 2. Делаем POST-запрос на скачивание с form_token
       const downloadUrl = `dl.php?t=${topicId}`;
+      const formData = new URLSearchParams();
+      formData.append('form_token', formToken);
 
-      console.log(`Sending request to download URL: ${this.baseUrl}${downloadUrl}`);
+      console.log(
+        `Sending POST request to download URL: ${this.baseUrl}${downloadUrl} with form_token`,
+      );
 
-      // Download the torrent file with binary response type
       const response = await this.visit(downloadUrl, {
-        method: 'GET',
+        method: 'POST',
+        data: formData,
         isBinary: true,
         allowRedirects: true,
         checkSession: true,
       });
 
       // Make sure the response is a torrent file
-      // For binary data, check if it's a Buffer and has a reasonable size
       const isTorrentFile =
         Buffer.isBuffer(response.body) && response.body.length > 100 && response.body[0] === 100; // 'd' in ASCII is 100
 
@@ -449,7 +473,6 @@ export class RutrackerService extends BaseTorrentTrackerService {
           'Response does not appear to be a valid torrent file: \n',
           response.body.toString(),
         );
-
         throw new Error('Failed to download valid torrent file');
       }
 
