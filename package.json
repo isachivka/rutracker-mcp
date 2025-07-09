@@ -20,7 +20,8 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "prepare": "husky install",
     "type-check": "tsc --noEmit",
-    "check": "npm run type-check && npm run lint"
+    "check": "npm run type-check && npm run lint",
+    "inspector": "npx @modelcontextprotocol/inspector@0.13.0"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.10.1",
