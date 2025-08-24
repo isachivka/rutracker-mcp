@@ -21,15 +21,15 @@
     "prepare": "husky install",
     "type-check": "tsc --noEmit",
     "check": "npm run type-check && npm run lint",
-    "inspector": "npx @modelcontextprotocol/inspector@0.13.0"
+    "inspector": "npx @modelcontextprotocol/inspector@0.16.5"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.10.1",
+    "@modelcontextprotocol/sdk": "^1.17.4",
     "@nestjs/common": "^10.0.0",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^10.0.0",
     "@nestjs/platform-express": "^10.0.0",
-    "@rekog/mcp-nest": "^1.5.0-beta.1",
+    "@rekog/mcp-nest": "^1.8.1",
     "@types/node-fetch": "^2.6.12",
     "axios": "^1.8.4",
     "iconv-lite": "^0.6.3",

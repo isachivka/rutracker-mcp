@@ -4,9 +4,6 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Set global prefix for API routes except MCP endpoints
-  app.setGlobalPrefix('/api', { exclude: ['sse', 'messages'] });
-
   // Enable CORS for MCP client access
   app.enableCors({
     origin: '*',
