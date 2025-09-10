@@ -53,12 +53,23 @@ export class TmdbTool {
           },
         ],
       };
-    } catch (error) {
+    } catch {
       return {
         content: [
           {
             type: 'text',
-            text: `Error getting season information: ${error.message}`,
+            text: JSON.stringify(
+              {
+                showTitle: title,
+                originalTitle: title,
+                seasonNumber: seasonNumber,
+                totalEpisodes: 0,
+                airedEpisodes: 0,
+                schedule: 'No information available',
+              },
+              null,
+              2,
+            ),
           },
         ],
       };

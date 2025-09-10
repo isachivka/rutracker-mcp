@@ -7,13 +7,13 @@ export class TmdbController {
 
   @Get('season-info')
   async getSeasonInfo(@Query('title') title: string, @Query('seasonNumber') seasonNumber: number) {
-    const show = await this.tmdbService.searchShow(title);
-
-    if (!show) {
-      throw new Error('TV show "Rick and Morty" not found in TMDB');
-    }
-
     try {
+      const show = await this.tmdbService.searchShow(title);
+
+      if (!show) {
+        throw new Error('TV show "Rick and Morty" not found in TMDB');
+      }
+
       const seasonInfo = await this.tmdbService.getSeasonDetails(show.id, seasonNumber);
 
       return {
@@ -27,8 +27,8 @@ export class TmdbController {
     } catch (error) {
       console.error(error);
       return {
-        showTitle: show ? show.name : title,
-        originalTitle: show ? show.original_name : seasonNumber,
+        showTitle: title,
+        originalTitle: title,
         seasonNumber: seasonNumber,
         totalEpisodes: 0,
         airedEpisodes: 0,
